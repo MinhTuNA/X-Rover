@@ -5,108 +5,108 @@
 - python3
 
 ## base station F9P: sử dụng ucenter2 cấu hình gps
-cách 1: quick configuration
-    1: survey-in mode:
-    + chọn survey in
-    + nhập minium duration (s):
-    + position accuracy limit (mm): 
-    mở message view: UBX -> NAV -> SVIN: quan sát độ chính xác cải thiện dần 
-    2: fixed mode:
-    sau khi có được vị trí từ surveyin mode:
+### cách 1: quick configuration
+#### 1: survey-in mode:
+- chọn survey in
+- nhập minium duration (s):
+- position accuracy limit (mm): 
+- mở message view: UBX -> NAV -> SVIN: quan sát độ chính xác cải thiện dần 
+#### 2: fixed mode:
+- sau khi có được vị trí từ surveyin mode:
     + chọn fixed
     + nhập Fixed position accuracy (mm):
     + Position type: 0 - ECEF      1 - LLH
     + nhập tọa độ tương ứng
-    config base station phát tín hiệu RTCM3 ra cổng usb:
+- config base station phát tín hiệu RTCM3 ra cổng usb:
     + CFG-USBOUTPROT-RTCM3X 1
     + CFG-MSGOUT-RTCM_3X_TYPE1005_USB 1
     + CFG-MSGOUT-RTCM_3X_TYPE1230_USB 1
     + CFG-MSGOUT-RTCM_3X_TYPE1074_USB 1
     + CFG-MSGOUT-RTCM_3X_TYPE1084_USB 1
     + CFG-MSGOUT-RTCM_3X_TYPE1124_USB 1
-cách 2: advanced configuration 
-    1: survey-in mode:
+### cách 2: advanced configuration 
+#### 1: survey-in mode:
     - CFG-TMODE-TMODE : value = 1
     - CFG-TMODE-SVIN_MIN_DUR: value: (thời gian tối thiểu thực hiện surveyin)
-    - CFG-TMODE-SVIN_ACC_LIMIT: value: (độ chính xác mong muốn)
-    mở message view: UBX -> NAV -> SVIN: quan sát độ chính xác cải thiện dần 
+    - CFG-TMODE-SVIN_ACC_LIMIT: value: (độ chính xác mong muốn)  
+    mở message view: UBX -> NAV -> SVIN: quan sát độ chính xác cải thiện dần  
     => đợi gps cải thiện độ chính xác tới mức mong muốn && 2
-    2: fixed mode:
-    - config base station phát tín hiệu RTCM3 ra cổng usb:
-        + CFG-USBOUTPROT-RTCM3X 1
-        + CFG-MSGOUT-RTCM_3X_TYPE1005_USB 1
-        + CFG-MSGOUT-RTCM_3X_TYPE1230_USB 1
-        + CFG-MSGOUT-RTCM_3X_TYPE1074_USB 1
-        + CFG-MSGOUT-RTCM_3X_TYPE1084_USB 1
-        + CFG-MSGOUT-RTCM_3X_TYPE1124_USB 1
-    - fixed mode:
-        + CFG-TMODE-POS_TYPE: 1 - LLH
-        + CFG-TMODE-LAT: tọa độ
-        + CFG-TMODE-LON: tọa độ
-        + CFG-TMODE-HEIGHT: độ cao
-        hoặc
-        + CFG-TMODE-POS_TYPE: 0 - ECEF
-        + CFG-TMODE-ECEF_X: x
-        + CFG-TMODE-ECEF_Y: y
-        + CFG-TMODE-ECEF_Z: z
-        ------------------------------------------------
-        + CFG-TMODE-MODE: 2 - fixed
+#### 2: fixed mode:
+- config base station phát tín hiệu RTCM3 ra cổng usb:
+    + CFG-USBOUTPROT-RTCM3X 1
+    + CFG-MSGOUT-RTCM_3X_TYPE1005_USB 1
+    + CFG-MSGOUT-RTCM_3X_TYPE1230_USB 1
+    + CFG-MSGOUT-RTCM_3X_TYPE1074_USB 1
+    + CFG-MSGOUT-RTCM_3X_TYPE1084_USB 1
+    + CFG-MSGOUT-RTCM_3X_TYPE1124_USB 1
+- fixed mode:
+    + CFG-TMODE-POS_TYPE: 1 - LLH
+    + CFG-TMODE-LAT: tọa độ
+    + CFG-TMODE-LON: tọa độ
+    + CFG-TMODE-HEIGHT: độ cao  
+    hoặc
+    + CFG-TMODE-POS_TYPE: 0 - ECEF
+    + CFG-TMODE-ECEF_X: x
+    + CFG-TMODE-ECEF_Y: y
+    + CFG-TMODE-ECEF_Z: z
+    ------------------------------------------------
+    + CFG-TMODE-MODE: 2 - fixed
 
 ## rover UM982: dùng phần mềm UPRECISE cấu hình gps
-trong mục receiver configurations: tìm & cấu hình các tham số
-$CONFIG, ANTENNA, CONFIG ANTENNA POWERON*7A
-$CONFIG, NMEAVERSION, CONFIG NMEAVERSION V410*47
-$CONFIG, RTK, CONFIG RTK TIMEOUT 600*69
-$CONFIG, RTK, CONFIG RTK RELIABILITY 3 1*76
-$CONFIG, PPP, CONFIG PPP TIMEOUT 300*6C
-$CONFIG, HEADING, CONFIG HEADING RELIABILITY 3*67
-$CONFIG, HEADING, CONFIG HEADING TRACTOR*69
-$CONFIG, HEADING, CONFIG HEADING LENGTH 0.00 0.00*38
-$CONFIG, DGPS, CONFIG DGPS TIMEOUT 600*69
-$CONFIG, RTCMB1CB2A, CONFIG RTCMB1CB2A ENABLE*25
-$CONFIG, ANTENNADELTAHEN, CONFIG ANTENNADELTAHEN 0.0000 0.0000 0.0000*3A
-$CONFIG,PPS, CONFIG PPS ENABLE GPS POSITIVE 500000 1000 0 0*6E
-$CONFIG, SIGNALGROUP, CONFIG SIGNALGROUP 4 5*05
-$CONFIG, ANTIJAM, CONFIG ANTIJAM AUTO*2B
-$CONFIG,AGNSS, CONFIG AGNSS DISABLE*70
+trong mục receiver configurations: tìm & cấu hình các tham số  
+- $CONFIG, ANTENNA, CONFIG ANTENNA POWERON*7A
+- $CONFIG, NMEAVERSION, CONFIG NMEAVERSION V410*47
+- $CONFIG, RTK, CONFIG RTK TIMEOUT 600*69
+- $CONFIG, RTK, CONFIG RTK RELIABILITY 3 1*76
+- $CONFIG, PPP, CONFIG PPP TIMEOUT 300*6C
+- $CONFIG, HEADING, CONFIG HEADING RELIABILITY 3*67
+- $CONFIG, HEADING, CONFIG HEADING TRACTOR*69
+- $CONFIG, HEADING, CONFIG HEADING LENGTH 0.00 0.00*38
+- $CONFIG, DGPS, CONFIG DGPS TIMEOUT 600*69
+- $CONFIG, RTCMB1CB2A, CONFIG RTCMB1CB2A ENABLE*25
+- $CONFIG, ANTENNADELTAHEN, CONFIG ANTENNADELTAHEN 0.0000 0.0000 0.0000*3A
+- $CONFIG,PPS, CONFIG PPS ENABLE GPS POSITIVE 500000 1000 0 0*6E
+- $CONFIG, SIGNALGROUP, CONFIG SIGNALGROUP 4 5*05
+- $CONFIG, ANTIJAM, CONFIG ANTIJAM AUTO*2B
+- $CONFIG,AGNSS, CONFIG AGNSS DISABLE*70
 
 ## Mục lục
 
-xrover/
-├── launch/
-├── xrover/
-├── package.xml
-├── README.MD
-├── setup.cfg
-├── setup.py
-
-xrover/xrover/
-├── connect_server.py ------------- (kết nối nestjs server)
-├── const.py ---------------------- (hằng số)
-├── execute_program.py ------------ (gửi tọa độ đích)
-├── h30_imu.py -------------------- (thư viện cảm biến IMU H30)
-├── imu_node.py ------------------- (đọc cảm biến H30 && publish)
-├── motor_controller.py ----------- (gửi lệnh điều khiển tới khối động cơ)
-├── navigation.py ----------------- (di chuyển A --> B )
-├── s21c_node.py ------------------ (đọc cảm biến tiệm cận && publish)
-├── um982.py ---------------------- (đọc gps && publish)
-
+xrover/  
+├── launch/  
+├── xrover/  
+├── package.xml  
+├── README.MD  
+├── setup.cfg  
+├── setup.py  
+  
+xrover/xrover/  
+├── connect_server.py ------------- (kết nối nestjs server)  
+├── const.py ---------------------- (hằng số)  
+├── execute_program.py ------------ (gửi tọa độ đích)  
+├── h30_imu.py -------------------- (thư viện cảm biến IMU H30)  
+├── imu_node.py ------------------- (đọc cảm biến H30 && publish)  
+├── motor_controller.py ----------- (gửi lệnh điều khiển tới khối động cơ)  
+├── navigation.py ----------------- (di chuyển A --> B )  
+├── s21c_node.py ------------------ (đọc cảm biến tiệm cận && publish)  
+├── um982.py ---------------------- (đọc gps && publish)  
+  
 
 ## danh sách topic
-/program_cmd (String) ---------- thực hiện chương trình vd: cmd = { "program_id": id, "cmd": "run",}
-/gps/goal (NavSatFix) ---------- tọa độ điểm đích
-/gps/fix (NavSatFix)  ---------- tọa độ robot
-/compass/heading (Float32) ----- hướng địa lý of robot
-/imu/data (Imu) ---------------- dữ liệu cảm biến IMU
-/cmd_vel (Twist) --------------- di chuyển robot
-/status (String) --------------- trạng thái robot
-/sensor/A (Range) -------------- cảm biến tiệm cận
-/sensor/B (Range)
-/sensor/C (Range)
-/sensor/D (Range)
-/sensor/E (Range)
-/sensor/F (Range)
-
+/program_cmd (String) ---------- thực hiện chương trình vd: cmd = { "program_id": id, "cmd": "run",}  
+/gps/goal (NavSatFix) ---------- tọa độ điểm đích  
+/gps/fix (NavSatFix)  ---------- tọa độ robot  
+/compass/heading (Float32) ----- hướng địa lý of robot  
+/imu/data (Imu) ---------------- dữ liệu cảm biến IMU  
+/cmd_vel (Twist) --------------- di chuyển robot  
+/status (String) --------------- trạng thái robot  
+/sensor/A (Range) -------------- cảm biến tiệm cận  
+/sensor/B (Range)  
+/sensor/C (Range)  
+/sensor/D (Range)  
+/sensor/E (Range)  
+/sensor/F (Range)  
+  
 
 
 ## chi tiết các node:
