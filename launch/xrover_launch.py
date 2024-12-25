@@ -29,13 +29,13 @@ def generate_launch_description():
                 output="screen",
                 parameters=[],
             ),
-            # Node(
-            #     package='xrover',  # Tên gói
-            #     executable='motor_controller_node',  # Tên của console_script (được định nghĩa trong setup.py)
-            #     name='motor_controller',  # Tên node
-            #     output='screen',  # Hiển thị đầu ra trên màn hình
-            #     parameters=[]
-            # ),
+            Node(
+                package='xrover',  # Tên gói
+                executable='motor_controller_node',  # Tên của console_script (được định nghĩa trong setup.py)
+                name='motor_controller',  # Tên node
+                output='screen',  # Hiển thị đầu ra trên màn hình
+                parameters=[]
+            ),
             Node(
                 package="xrover",
                 executable="um982_node",

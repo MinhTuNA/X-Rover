@@ -3,22 +3,23 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
+from .const import *
 import serial
 import re
 import numpy as np
 
 
 class UM982Node(Node):
-    def __init__(self, uart_port="/dev/ttyUSB1", baudrate=115200):
+    def __init__(self):
         super().__init__("um982_node")
         self.buffer = ""
         self.gps_publisher = self.create_publisher(NavSatFix, "/gps/fix", 10)
         self.heading_publisher = self.create_publisher(Float32, "/compass/heading", 10)
 
-        self.uart_port = uart_port
-        self.baudrate = baudrate
+        self.uart_port = UM982_PORT
+        self.baudrate = UM982_BAUDRATE
         self.get_logger().info(
-            f"Connecting to UART at {uart_port} with baudrate {baudrate}"
+            f"Connecting to UART at {UM982_PORT} with baudrate {UM982_BAUDRATE}"
         )
         try:
             self.serial_port = serial.Serial(
@@ -30,7 +31,8 @@ class UM982Node(Node):
             raise
 
         self.uart_timer = self.create_timer(0.1, self.read_uart_and_publish)
-
+        
+        
     def read_uart_and_publish(self):
         try:
             # Đọc dữ liệu từ UART
@@ -314,23 +316,22 @@ class UM982Node(Node):
         return None
 
     def destroy_node(self):
-        super().destroy_node()
         self.serial_port.close()
+        super().destroy_node()
         self.get_logger().info("UART connection closed.")
 
 
 def main(args=None):
     rclpy.init(args=args)
     um982_node = UM982Node()
-
     try:
         rclpy.spin(um982_node)
     except KeyboardInterrupt:
-        um982_node.get_logger().info("Shutting down.")
+        um982_node.get_logger().info("Node interrupted by user.")
     finally:
         um982_node.destroy_node()
         rclpy.shutdown()
-
+        um982_node.get_logger().info("Node shut down.")
 
 if __name__ == "__main__":
     main()

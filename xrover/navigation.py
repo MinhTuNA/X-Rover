@@ -46,7 +46,7 @@ class Navigator(Node):
         self.goal_subscription
         self.imu_subscription
 
-        # self.timer = self.create_timer(0.1, self.navigate)
+        self.timer = self.create_timer(0.1, self.navigate)
         self.step_count = 30
 
     def gps_callback(self, msg):

@@ -138,9 +138,9 @@ class YesenseDecoder:
         except serial.SerialException as e:
             print(f"UART Error: {e}")
 
-    def read_from_uart_(self, ser):
+    def read_from_uart_(self, ser, uart_rx_buf_len):
         try:
-            data = ser.read(UART_RX_BUF_LEN)
+            data = ser.read(uart_rx_buf_len)
             if data:
                 result = {}
                 ret = self.data_proc(data, result)
@@ -307,7 +307,7 @@ def main():
         with serial.Serial(port, baudrate, timeout=timeout) as ser:
             ser.flushInput()
             while True:
-                data = imu.read_from_uart_(ser)
+                data = imu.read_from_uart_(ser, UART_RX_BUF_LEN)
                 if isinstance(data, dict):
                     tid = data.get("tid")
                     acc = data.get("acc")

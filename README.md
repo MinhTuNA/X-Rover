@@ -1,7 +1,7 @@
 # Xrover Project
 
 ## requirememts
-- ros2 foxy
+- ros2 humble
 - python3
 
 ## base station F9P: sử dụng ucenter2 cấu hình gps

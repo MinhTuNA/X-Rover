@@ -30,7 +30,7 @@ class IMU_Node(Node):
             ) as ser:
                 ser.flushInput()
                 while True:
-                    data = self.decoder.read_from_uart_(ser)
+                    data = self.decoder.read_from_uart_(ser, H30_UART_RX_BUF_LEN)
                     if isinstance(data, dict):
                         tid = data.get("tid")
                         acc = data.get("acc")

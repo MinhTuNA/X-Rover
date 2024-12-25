@@ -80,8 +80,8 @@ class DistanceSensorsNode(Node):
         msg.max_range = MAX_RANGE
         msg.range = distance / 1000.0
         publisher.publish(msg)
-        if frame_id == "E":
-            self.get_logger().info(f"Published {frame_id}: {msg.range:.3f} m")
+        # if frame_id == "E":
+        #     self.get_logger().info(f"Published {frame_id}: {msg.range:.3f} m")
 
 
 def main(args=None):
