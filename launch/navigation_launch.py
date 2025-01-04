@@ -10,7 +10,7 @@ def generate_launch_description():
             SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
             Node(
                 package="xrover",  # Tên gói
-                executable="navigator_node",  # Tên node
+                executable="navigation_node",  # Tên node
                 name="navigation",
                 output="screen",  # Hiển thị đầu ra trên màn hình
                 parameters=[],

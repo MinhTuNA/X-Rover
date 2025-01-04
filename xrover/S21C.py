@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Range
-from .const import *
+from .Const import *
 import serial
 
 

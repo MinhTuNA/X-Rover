@@ -40,7 +40,6 @@ class MotorController(Node):
         return omega_left, omega_right
 
     "RPM"
-
     def motor_speeds(self, omega_left, omega_right):
         f_left = (omega_left / (2 * math.pi)) * 60
         f_right = (omega_right / (2 * math.pi)) * 60

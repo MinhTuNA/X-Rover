@@ -23,15 +23,13 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'sensor_node = xrover.sensor:main',
-            'connect_server_node = xrover.connect_server:main',
-            'navigator_node = xrover.navigation:main',
-            'execute_program_node = xrover.execute_program:main',
-            'motor_controller_node = xrover.motor_controller:main',
-            'rtcm3_publisher = xrover.connect_base_station:main',
-            'um982_node = xrover.um982:main',
-            'imu_node = xrover.imu_node:main',
-            's21c_node = xrover.s21c_node:main',
+            'connect_server_node = xrover.ConnectServer:main',
+            'navigation_node = xrover.Navigation:main',
+            'execute_program_node = xrover.ExecuteProgram:main',
+            'motor_controller_node = xrover.MotorController:main',
+            'um982_node = xrover.UM982:main',
+            'imu_node = xrover.IMU:main',
+            's21c_node = xrover.S21C:main',
         ],
     },
 )

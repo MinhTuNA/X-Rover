@@ -14,3 +14,11 @@ ULTRASONIC_PORT = "/dev/ttyACM0"
 # rtk gps um982
 UM982_BAUDRATE = 115200
 UM982_PORT = "/dev/ttyUSB0"
+
+Ki = 0.1
+Kp = 0.1
+Kd = 0.1
+
+rover_speed = 0.1
+distance_threshold = 0.1
+angle_threshold = 20

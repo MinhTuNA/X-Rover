@@ -3,7 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
-from .const import *
+from .Const import *
 import serial
 import re
 import numpy as np

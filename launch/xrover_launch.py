@@ -10,16 +10,16 @@ def generate_launch_description():
             SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
             Node(
                 package="xrover",
-                executable="navigator_node",
-                name="navigation_node",
+                executable="navigation_node",
+                name="navigation",
                 output="screen",
                 parameters=[],
             ),
             Node(
-                package="xrover",  # Tên gói
+                package="xrover",
                 executable="connect_server_node",  # Tên của console_script (được định nghĩa trong setup.py)
-                name="connect_server_node",  # Tên node
-                output="screen",  # Hiển thị đầu ra trên màn hình
+                name="connect_server", 
+                output="screen", 
                 parameters=[],
             ),
             Node(
@@ -30,10 +30,10 @@ def generate_launch_description():
                 parameters=[],
             ),
             Node(
-                package='xrover',  # Tên gói
-                executable='motor_controller_node',  # Tên của console_script (được định nghĩa trong setup.py)
-                name='motor_controller',  # Tên node
-                output='screen',  # Hiển thị đầu ra trên màn hình
+                package='xrover',
+                executable='motor_controller_node',  
+                name='motor_controller', 
+                output='screen', 
                 parameters=[]
             ),
             Node(

@@ -81,15 +81,17 @@ xrover/
 ├── setup.py  
   
 xrover/xrover/  
-├── connect_server.py ------------- (kết nối nestjs server)  
+├── ConnectServer.py -------------- (kết nối nestjs server)  
 ├── const.py ---------------------- (hằng số)  
-├── execute_program.py ------------ (gửi tọa độ đích)  
-├── h30_imu.py -------------------- (thư viện cảm biến IMU H30)  
-├── imu_node.py ------------------- (đọc cảm biến H30 && publish)  
-├── motor_controller.py ----------- (gửi lệnh điều khiển tới khối động cơ)  
-├── navigation.py ----------------- (di chuyển A --> B )  
-├── s21c_node.py ------------------ (đọc cảm biến tiệm cận && publish)  
-├── um982.py ---------------------- (đọc gps && publish)  
+├── ExecuteProgram.py ------------- (gửi tọa độ đích)  
+├── H30IMU.py --------------------- (thư viện cảm biến IMU H30)  
+├── IMU.py ------------------------ (đọc cảm biến H30 && publish)  
+├── MotionController.py ----------- (điều khiển chuyển động)  
+├── MotorController.py ------------ (điều khiển động cơ)  
+├── Navigation.py ----------------- (di chuyển A --> B )  
+├── PathPlaner.py ----------------- (tính khoảng cách & hướng giữa 2 điểm)
+├── S21C.py ----------------------- (đọc cảm biến tiệm cận && publish)  
+├── UM982.py ---------------------- (đọc gps && publish)  
   
 
 ## danh sách topic
