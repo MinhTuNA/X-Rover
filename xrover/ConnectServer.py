@@ -101,12 +101,6 @@ def program(data):
 def run_program(data):
     node.run(id=data)
 
-@sio.event
-def cmd_vel(cmd_vel):
-    print(f"cmd vel >> x = {cmd_vel}")
-    print(f"cmd vel >> z = {cmd_vel}")
-
-    
 
 @sio.event
 def disconnect():
