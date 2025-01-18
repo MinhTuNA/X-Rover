@@ -25,9 +25,9 @@ class UM982Node(Node):
             self.serial_port = serial.Serial(
                 port=self.uart_port, baudrate=self.baudrate, timeout=1
             )
-            self.get_logger().info("Successfully connected to UART")
+            self.get_logger().info("Successfully connected to UM982")
         except Exception as e:
-            self.get_logger().error(f"Failed to open UART port: {e}")
+            self.get_logger().error(f"Connection to UM982 Failed : {e}")
             raise
 
         self.uart_timer = self.create_timer(0.1, self.read_uart_and_publish)
