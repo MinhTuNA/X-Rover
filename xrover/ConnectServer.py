@@ -6,7 +6,7 @@ from std_msgs.msg import Float32, String
 import json
 import os
 import socketio
-
+from .Const import *
 sio = socketio.Client()
 
 
@@ -47,7 +47,7 @@ class ConnectServer(Node):
 
     def connect_to_server(self):
         try:
-            sio.connect("http://192.168.1.214:8901")
+            sio.connect(SERVER_IP)
             if sio.connected:
                 self.get_logger().info("Connected to Socket.IO server.")
             else:
@@ -96,9 +96,15 @@ def program(data):
 
     print(f"Data has been saved to {file_path}")
 
+@sio.event
+def cmd_vel(data):
+    x = data.x
+    z = data.z
+    node.get_logger().info(f"Received from server: {data}")
 
 @sio.event
 def run_program(data):
+    node.get_logger().info("Received from server:", data)
     node.run(id=data)
 
 

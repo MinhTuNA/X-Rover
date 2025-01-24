@@ -9,10 +9,10 @@ def generate_launch_description():
         [
             SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
             Node(
-                package="xrover",  # Tên gói
-                executable="connect_server_node",  # Tên của console_script (được định nghĩa trong setup.py)
-                name="connect_server",  # Tên node
-                output="screen",  # Hiển thị đầu ra trên màn hình
+                package="xrover",
+                executable="connect_server_node",
+                name="connect_server", 
+                output="screen", 
                 parameters=[],
             ),
         ]

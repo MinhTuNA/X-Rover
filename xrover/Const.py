@@ -1,3 +1,6 @@
+# Server IP
+SERVER_IP = "http://192.168.1.11:8901"
+
 # IMU
 H30_IMU_BAUDRATE = 460800
 H30_IMU_PORT = "/dev/ttyACM1"

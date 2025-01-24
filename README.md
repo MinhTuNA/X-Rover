@@ -82,12 +82,13 @@ xrover/
   
 xrover/xrover/  
 ├── ConnectServer.py -------------- (kết nối nestjs server)  
-├── const.py ---------------------- (hằng số)  
+├── const.py ---------------------- (biến)  
+├── Driver.py --------------------- (giao tiếp driver điều khiển động cơ)  
 ├── ExecuteProgram.py ------------- (gửi tọa độ đích)  
 ├── H30IMU.py --------------------- (thư viện cảm biến IMU H30)  
 ├── IMU.py ------------------------ (đọc cảm biến H30 && publish)  
 ├── MotionController.py ----------- (điều khiển chuyển động)  
-├── MotorController.py ------------ (điều khiển động cơ)  
+├── MotorController.py ------------ (tính vận tốc && điều khiển động cơ qua driver)  
 ├── Navigation.py ----------------- (di chuyển A --> B )  
 ├── PathPlaner.py ----------------- (tính khoảng cách & hướng giữa 2 điểm)
 ├── S21C.py ----------------------- (đọc cảm biến tiệm cận && publish)  
