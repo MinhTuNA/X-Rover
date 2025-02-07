@@ -5,11 +5,16 @@ from .PathPlaner import PathPlaner
 from .Const import *
 import json
 from .KalmanFilter import KalmanFilter
+from .PID import PIDController
 class MotionController:
     def __init__(self, node, sensor_manager):
         self.kalman_filter = KalmanFilter(process_noise=0.1, measurement_noise=0.5)
         self.node = node
         self.sensor_manager = sensor_manager
+        self.kp = angleKp
+        self.ki = angleKi
+        self.kd = angleKd
+        self.angle_pid = PIDController(self.Kp, self.Ki, self.Kd)
         self.error_integral = 0
         self.previous_angle_error = 0
         self.last_twist = Twist()
@@ -40,17 +45,16 @@ class MotionController:
         angle_error = (angle_error + 180) % 360 - 180
         
         # PID
-        self.error_integral += angle_error
-        error_derivative = angle_error - self.previous_angle_error
-        self.previous_angle_error = angle_error
+        dt = 0.1
         twist = Twist()
+        pid_output = self.angle_pid.compute(angle_error, dt)
         if distance > distance_threshold:    
             if abs(angle_error) > angle_threshold:
                 twist.linear.x = 0.0
-                twist.angular.z = Kp * angle_error + Ki * self.error_integral + Kd * error_derivative
+                twist.angular.z = pid_output
             else:
                 twist.linear.x = max(0.05, min(rover_speed, distance / distance_threshold * rover_speed))
-                twist.angular.z = Kp * angle_error + Ki * self.error_integral + Kd * error_derivative
+                twist.angular.z = pid_output
         else:
             twist.linear.x = 0.0
             twist.angular.z = 0.0

@@ -1,9 +1,9 @@
 # Server IP
-SERVER_IP = "http://192.168.1.11:8901"
+SERVER_IP = "http://192.168.1.214:8901"
 
 # IMU
 H30_IMU_BAUDRATE = 460800
-H30_IMU_PORT = "/dev/ttyACM1"
+H30_IMU_PORT = "/dev/ttyACM0"
 H30_UART_RX_BUF_LEN = 512
 CNT_PER_SECOND = 1000
 
@@ -31,11 +31,17 @@ torque_mode = 0x01
 READ_REGISTER = 0x03
 WRITE_REGISTER = 0x10
 
-Ki = 0.1
-Kp = 0.1
-Kd = 0.1
+motorKi = 0.1
+motorKp = 0.1
+motorKd = 0.1
+
+angleKi = 0.1
+angleKp = 0.1
+angleKd = 0.1
 
 rover_speed = 0.1
 distance_threshold = 0.1
 angle_threshold = 20
 
+WHEEL_RADIUS = 0.05
+WHEEL_BASE = 0.3

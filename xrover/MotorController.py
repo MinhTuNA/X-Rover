@@ -2,37 +2,77 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Imu
 import math
 from .Const import *
 from .Driver import Driver
+from .PID import PIDController
+
 class MotorController(Node):
     def __init__(self):
         super().__init__("motor_controller_node")
         self.get_logger().info("motor controller has been started")
-        self.wheel_radius = 0.05
-        self.wheel_base = 0.3
-        self.driver = Driver()
-        self.driver.connect()
-        # self.linear_velocity = 0
-        # self.angular_velocity = 0
+        self.wheel_radius = WHEEL_RADIUS
+        self.wheel_base = WHEEL_BASE
+        # self.driver = Driver()
+        # self.driver.connect()
+        self.linear_velocity = 0
+        self.angular_velocity = 0
+        self.kp = motorKp
+        self.ki = motorKi
+        self.kd = motorKd
+        self.yaw_pid = PIDController(kp=self.kp, ki=self.ki, kd=self.kd)
         self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
-            
-    def cmd_vel_callback(self, msg):
-        linear_velocity = msg.linear.x
-        angular_velocity = msg.angular.z
-        omega_left, omega_right = self.wheel_speeds(
-            linear_velocity=linear_velocity, angular_velocity=angular_velocity
-        )
-        # self.get_logger().info(f"Received velocity: linear.x={msg.linear.x}, angular.z={msg.angular.z}")
-        self.get_logger().info(f"left >> {omega_left} | right >> {omega_right}")
-        f_left, f_right = self.motor_speeds(
-            omega_left=omega_left, omega_right=omega_right
-        )
-        self.driver.motor_controller(device_address=1, left_rpm=f_left, right_rpm=f_right, left_torque=100, right_torque=100)
-        self.get_logger().info(
-            f"left speed >> {f_left} RPM | right speed >> {f_right} RPM"
-        )
+        self.create_subscription(Imu, "/imu/data", self.imu_callback, 10)
+        self.target_yaw = None  
+        self.current_yaw = 0.0 
+        self.last_time = self.get_clock().now()
+        self.timer = self.create_timer(0.5, self.update)
+    
+    def quaternion_to_euler(self, w, x, y, z):
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+        # Pitch (y-axis rotation)
+        sinp = 2 * (w * y - z * x)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp)  # Gimbal lock
+        else:
+            pitch = math.asin(sinp)
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
 
+        return roll, pitch, yaw
+    
+    def imu_callback(self, msg):
+        acc = [
+            msg.linear_acceleration.x,
+            msg.linear_acceleration.y,
+            msg.linear_acceleration.z,
+        ]
+        gyro = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
+        quat = [
+            msg.orientation.w,
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+        ]
+        self.imu_roll, self.imu_pitch, self.imu_yaw = self.quaternion_to_euler(
+            quat[0], quat[1], quat[2], quat[3]
+        )
+        roll_deg = math.degrees(self.imu_roll)
+        pitch_deg = math.degrees(self.imu_pitch)
+        yaw_deg = math.degrees(self.imu_yaw)
+        self.current_yaw = yaw_deg
+        self.offset = self.compass_heading - self.imu_yaw
+    
+    def cmd_vel_callback(self, msg):
+        self.linear_velocity = msg.linear.x
+        self.angular_velocity = msg.angular.z
+        
+        
     def wheel_speeds(self, linear_velocity, angular_velocity):
         omega_left = (
             linear_velocity - (angular_velocity * self.wheel_base / 2)
@@ -47,6 +87,29 @@ class MotorController(Node):
         f_left = (omega_left / (2 * math.pi)) * 60
         f_right = (omega_right / (2 * math.pi)) * 60
         return f_left, f_right
+    
+    def update(self):
+        if self.target_yaw is None and self.linear_velocity != 0:
+            self.target_yaw = self.current_yaw  
+        yaw_error = (self.target_yaw - self.current_yaw) if self.target_yaw is not None else 0
+        current_time = self.get_clock().now()
+        dt = (current_time - self.last_time).nanoseconds / 1e9  
+        self.last_time = current_time
+        yaw_correction = self.yaw_pid.compute(yaw_error, dt)
+        adjusted_angular_velocity = self.angular_velocity + yaw_correction
+        omega_left, omega_right = self.wheel_speeds(
+            linear_velocity=self.linear_velocity, angular_velocity=adjusted_angular_velocity
+        )
+        
+        # self.get_logger().info(f"Received velocity: linear.x={msg.linear.x}, angular.z={msg.angular.z}")
+        # self.get_logger().info(f"left >> {omega_left} | right >> {omega_right}")
+        f_left, f_right = self.motor_speeds(
+            omega_left=omega_left, omega_right=omega_right
+        )
+        # self.driver.motor_controller(device_address=1, left_rpm=f_left, right_rpm=f_right, left_torque=100, right_torque=100)
+        self.get_logger().info(
+            f"left speed >> {f_left} RPM | right speed >> {f_right} RPM"
+        )
         
     
 def main(args=None):

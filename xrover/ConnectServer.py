@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import NavSatFix,Image
 from std_msgs.msg import Float32, String
+from geometry_msgs.msg import Twist
+import cv2
+import base64
+from cv_bridge import CvBridge
 import json
 import os
 import socketio
@@ -17,8 +21,9 @@ class ConnectServer(Node):
         self.imu_heading = None
         self.create_subscription(NavSatFix, "/gps/fix", self.gps_callback, 10)
         self.create_subscription(Float32, "/imu/heading", self.imu_callback, 10)
+        self.create_subscription(Image, "/camera/color/image_raw", self.image_callback, 10)
         self.publish_program_cmd = self.create_publisher(String, "/program_cmd", 10)
-
+        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
     def gps_callback(self, msg):
         """Xử lý dữ liệu GPS."""
         self.gps_data = {
@@ -31,6 +36,21 @@ class ConnectServer(Node):
     def imu_callback(self, msg):
         self.imu_heading = msg.data
         self.send_data_to_server()
+    
+    def image_callback(self, msg):
+        try:
+            cv_image = CvBridge().imgmsg_to_cv2(msg, "bgr8")
+            _, img_encoded = cv2.imencode(".jpg", cv_image)
+            img_bytes = img_encoded.tobytes()
+            if sio.connected:
+                sio.emit("image",{"image":img_bytes})
+                self.get_logger().info("Send image to server")
+            else:
+                self.get_logger().info("Not connected to server")
+        except Exception as e:
+            self.get_logger().error(f"Error in image_callback: {e}")
+                
+        
 
     def send_data_to_server(self):
         if self.gps_data is None or self.imu_heading is None:
@@ -74,6 +94,16 @@ class ConnectServer(Node):
         msg.data = cmd_json
         self.publish_program_cmd.publish(msg)
         # self.get_logger().info(f"cmd: {cmd}")
+    def publish_cmd_vel(self, x=None, z=None):
+        if(x is None or z is None):
+            self.get_logger().info("x or z is None")
+            return
+        twist = Twist()
+        twist.linear.x = float(x)
+        twist.angular.z = float(z)
+        self.cmd_vel_pub.publish(twist)  
+        self.get_logger().info(f"linear.x={twist.linear.x}, angular.z={twist.angular.z}")
+        print(f"linear.x={twist.linear.x}, angular.z={twist.angular.z}")
 
 
 @sio.event
@@ -98,9 +128,9 @@ def program(data):
 
 @sio.event
 def cmd_vel(data):
-    x = data.x
-    z = data.z
-    node.get_logger().info(f"Received from server: {data}")
+    x = data["x"]
+    z = data["z"]
+    node.publish_cmd_vel(x, z)
 
 @sio.event
 def run_program(data):
@@ -117,7 +147,7 @@ def main(args=None):
     rclpy.init(args=args)
     global node
     node = ConnectServer()
-    node.connect_to_server()
+    # node.connect_to_server()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

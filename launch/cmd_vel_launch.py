@@ -1,17 +1,15 @@
-import launch
 from launch import LaunchDescription
 from launch.actions import SetEnvironmentVariable
 from launch_ros.actions import Node
 
-
 def generate_launch_description():
     return LaunchDescription(
         [
-            SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
+            SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
             Node(
                 package="xrover",
-                executable="connect_server_node",
-                name="connect_server", 
+                executable="cmd_vel_node",
+                name="cmd_vel", 
                 output="screen", 
                 parameters=[],
             ),
