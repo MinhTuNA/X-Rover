@@ -66,7 +66,6 @@ class MotorController(Node):
         pitch_deg = math.degrees(self.imu_pitch)
         yaw_deg = math.degrees(self.imu_yaw)
         self.current_yaw = yaw_deg
-        self.offset = self.compass_heading - self.imu_yaw
     
     def cmd_vel_callback(self, msg):
         self.linear_velocity = msg.linear.x
@@ -89,6 +88,11 @@ class MotorController(Node):
         return f_left, f_right
     
     def update(self):
+        if(self.linear_velocity == 0 and self.angular_velocity == 0):
+            self.get_logger().info( f"left speed >> {0} RPM | right speed >> {0} RPM" )
+            self.target_yaw = None
+            self.yaw_pid.reset()
+            return 
         if self.target_yaw is None and self.linear_velocity != 0:
             self.target_yaw = self.current_yaw  
         yaw_error = (self.target_yaw - self.current_yaw) if self.target_yaw is not None else 0

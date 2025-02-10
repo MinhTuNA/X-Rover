@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription(
         [
-            SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
+            SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
                 package="xrover",  # Tên gói
                 executable="motor_controller_node",  # Tên của console_script (được định nghĩa trong setup.py)

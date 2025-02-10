@@ -71,11 +71,12 @@ class IMU_Node(Node):
                         roll = euler[0]
                         pitch = euler[1]
                         yaw = euler[2]
-                        self.get_logger().info(
-                            f"\neuler >> {int(euler[0])} {int(euler[1])} {int(euler[2])}"
-                        )
-
+                        # self.get_logger().info(
+                        #     f"\neuler >> {int(euler[0])} {int(euler[1])} {int(euler[2])}"
+                        # )
+                        
                         self.imu_publisher.publish(imu_msg)
+                        self.get_logger().info("IMU data published")
 
                     elif data == "BUF_FULL":
                         consecutive_errors += 1

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix,Image
+from sensor_msgs.msg import NavSatFix,Image,Imu
 from std_msgs.msg import Float32, String
 from geometry_msgs.msg import Twist
 import cv2
@@ -18,9 +18,10 @@ class ConnectServer(Node):
     def __init__(self):
         super().__init__("connect_server_node")
         self.gps_data = None
-        self.imu_heading = None
+        self.imu_heading = 180
         self.create_subscription(NavSatFix, "/gps/fix", self.gps_callback, 10)
-        self.create_subscription(Float32, "/imu/heading", self.imu_callback, 10)
+        self.create_subscription(Float32, "/imu/heading", self.heading_callback, 10)
+        self.create_subscription(Imu, "/imu/data", self.imu_callback, 10)
         self.create_subscription(Image, "/camera/color/image_raw", self.image_callback, 10)
         self.publish_program_cmd = self.create_publisher(String, "/program_cmd", 10)
         self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
@@ -33,9 +34,30 @@ class ConnectServer(Node):
         }
         self.send_data_to_server()
 
-    def imu_callback(self, msg):
+    def heading_callback(self, msg):
         self.imu_heading = msg.data
         self.send_data_to_server()
+    
+    def imu_callback(self, msg):
+        acc = [
+            msg.linear_acceleration.x,
+            msg.linear_acceleration.y,
+            msg.linear_acceleration.z,
+        ]
+        gyro = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
+        quat = [
+            msg.orientation.w,
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+        ]
+        if(sio.connected):
+            sio.emit("IMUDataFromXrower",{
+                "acc": acc,
+                "gyro": gyro,
+                "quat": quat
+            })
+            self.get_logger().info("Send IMU data to server")
     
     def image_callback(self, msg):
         try:
@@ -63,7 +85,7 @@ class ConnectServer(Node):
         if sio.connected:
             sio.emit("GPSdataFromXrower", location_data)
             self.gps_data = None
-            self.imu_heading = None
+            # self.imu_heading = None
 
     def connect_to_server(self):
         try:
@@ -147,7 +169,7 @@ def main(args=None):
     rclpy.init(args=args)
     global node
     node = ConnectServer()
-    # node.connect_to_server()
+    node.connect_to_server()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

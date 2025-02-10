@@ -14,3 +14,6 @@ class PIDController:
         output = self.kp * error + self.ki * self.integral + self.kd * derivative
         self.prev_error = error
         return output
+    def reset(self):
+        self.prev_error = 0
+        self.integral = 0
