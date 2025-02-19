@@ -101,7 +101,8 @@ xrover/xrover/
 /gps/fix (NavSatFix)  ---------- tọa độ robot  
 /compass/heading (Float32) ----- hướng địa lý of robot  
 /imu/data (Imu) ---------------- dữ liệu cảm biến IMU  
-/cmd_vel (Twist) --------------- di chuyển robot  
+/rover/vel (Twist) ------------- di chuyển rover  
+/delta/move (Point) ------------ di chuyển robot delta  
 /status (String) --------------- trạng thái robot  
 /sensor/A (Range) -------------- cảm biến tiệm cận  
 /sensor/B (Range)  

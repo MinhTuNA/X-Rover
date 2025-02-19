@@ -1,0 +1,59 @@
+import sys
+from PySide6.QtWidgets import QApplication
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Point
+from std_msgs.msg import String
+from .RobotInterface import RobotInterface
+from .SerialDeviceScanner import DevicePortScanner
+from .Const import *
+class Delta(Node):
+    def __init__(self):
+        super().__init__("delta_node")
+        self.get_logger().info("Delta Node Started")
+        
+        self.is_first_connect = True
+        
+        self.scanner = DevicePortScanner()
+        self.delta_port = self.scanner.find_delta_x_port()
+        self.delta = RobotInterface(port=self.delta_port)
+        self.delta.open()
+        if self.delta.is_connected()==True:
+            if self.is_first_connect == True:
+                self.is_first_connect = False
+                self.delta.robot_resume()
+        self.delta.set_z_safe(Z_SAFE)
+        
+        self.create_subscription(Point,"/delta/move",self.move_to_call_back,10)
+        self.create_subscription(String,"/delta/go_home",self.go_home_call_back,10)
+    
+    def move_to_call_back(self,msg):
+        x = msg.x
+        y = msg.y
+        z = msg.z
+        self.move_delta(x=x,y=y,z=z)
+    
+    def go_home_call_back(self,msg):
+        self.delta.go_home()
+    
+    def move_delta (self, x,y,z,is_relative=False):
+        if is_relative == False:
+            self.delta.move(X=x, Y=y, Z=z)
+        else:
+            self.delta.move_relative(X=x, Y=y, Z=z)
+        
+def main(args=None):
+    rclpy.init(args=args)
+    app = QApplication(sys.argv)
+    try:
+        node = Delta()
+        while rclpy.ok():
+            rclpy.spin_once(node, timeout_sec=0.1)
+    except Exception as e:
+        print(e)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()

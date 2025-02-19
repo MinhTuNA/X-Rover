@@ -31,6 +31,7 @@ setup(
             'imu_node = xrover.IMU:main',
             's21c_node = xrover.S21C:main',
             'cmd_vel_node = xrover.test_cmd_vel:main',
+            'delta_node = xrover.Delta:main',
         ],
     },
 )

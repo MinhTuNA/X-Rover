@@ -8,8 +8,8 @@ def generate_launch_description():
             SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
                 package="xrover",
-                executable="cmd_vel_node",
-                name="cmd_vel", 
+                executable="delta_node",
+                name="delta", 
                 output="screen", 
                 parameters=[],
             ),

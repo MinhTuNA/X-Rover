@@ -1,5 +1,5 @@
 # Server IP
-SERVER_IP = "http://192.168.1.214:8901"
+SERVER_IP = "http://192.168.1.214:8901/rover"
 
 # IMU
 H30_IMU_BAUDRATE = 460800
@@ -45,3 +45,8 @@ angle_threshold = 20
 
 WHEEL_RADIUS = 0.05
 WHEEL_BASE = 0.3
+
+# Delta Robot
+
+Z_SAFE = -700
+
