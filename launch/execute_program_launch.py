@@ -7,12 +7,12 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription(
         [
-            SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
+            SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
-                package="xrover",  # Tên gói
-                executable="execute_program_node",  # Tên của console_script (được định nghĩa trong setup.py)
-                name="execute_program",  # Tên node
-                output="screen",  # Hiển thị đầu ra trên màn hình
+                package="xrover",
+                executable="execute_program_node",
+                name="execute_program",
+                output="screen",
                 parameters=[],
             ),
         ]

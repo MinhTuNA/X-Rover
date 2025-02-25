@@ -80,31 +80,29 @@ xrover/
 ├── setup.cfg  
 ├── setup.py  
   
-xrover/xrover/  
+xrover/xrover/ 
+├── /lib -------------------------- (thư viện liên quan)  
 ├── ConnectServer.py -------------- (kết nối nestjs server)  
-├── const.py ---------------------- (biến)  
-├── Driver.py --------------------- (giao tiếp driver điều khiển động cơ)  
+├── Delta.py ---------------------- (điều khiển robot delta)  
 ├── ExecuteProgram.py ------------- (gửi tọa độ đích)  
-├── H30IMU.py --------------------- (thư viện cảm biến IMU H30)  
-├── IMU.py ------------------------ (đọc cảm biến H30 && publish)  
-├── MotionController.py ----------- (điều khiển chuyển động)  
-├── MotorController.py ------------ (tính vận tốc && điều khiển động cơ qua driver)  
+├── IMU.py ------------------------ (đọc cảm biến IMU H30 && publish)  
+├── MotorController.py ------------ (điều khiển động cơ)  
 ├── Navigation.py ----------------- (di chuyển A --> B )  
-├── PathPlaner.py ----------------- (tính khoảng cách & hướng giữa 2 điểm)
 ├── S21C.py ----------------------- (đọc cảm biến tiệm cận && publish)  
 ├── UM982.py ---------------------- (đọc gps && publish)  
   
 
 ## danh sách topic
-/program_cmd (String) ---------- thực hiện chương trình vd: cmd = { "program_id": id, "cmd": "run",}  
-/gps/goal (NavSatFix) ---------- tọa độ điểm đích  
-/gps/fix (NavSatFix)  ---------- tọa độ robot  
-/compass/heading (Float32) ----- hướng địa lý of robot  
-/imu/data (Imu) ---------------- dữ liệu cảm biến IMU  
-/rover/vel (Twist) ------------- di chuyển rover  
-/delta/move (Point) ------------ di chuyển robot delta  
-/status (String) --------------- trạng thái robot  
-/sensor/A (Range) -------------- cảm biến tiệm cận  
+/program_cmd (String) -------------- thực hiện chương trình vd: cmd = { "program_id": id, "cmd": "run",}  
+/gps/goal (NavSatFix) -------------- tọa độ điểm đích  
+/gps/fix (NavSatFix)  -------------- tọa độ robot  
+/gps/heading (Float32) ------------- hướng địa lý robot  
+/imu/data (Imu) -------------------- dữ liệu cảm biến IMU  
+/rover/vel (Twist) ----------------- di chuyển rover  
+/delta/move (Point) ---------------- di chuyển robot delta  
+/delta/request_status (String)------ yêu cầu trả về trạng thái robot delta tại topic /status  
+/status (String) ------------------- trạng thái robot  
+/sensor/A (Range) ------------------ cảm biến tiệm cận  
 /sensor/B (Range)  
 /sensor/C (Range)  
 /sensor/D (Range)  
@@ -115,53 +113,35 @@ xrover/xrover/
 
 ## chi tiết các node:
 1. connect_server_node
-File: connect_server.py
-- Subscriptions: (NavSatFix, '/gps/fix')
-- Subscriptions: (Float32, '/compass/heading')
-- Publications: (String,'/program_cmd')
+File: ConnectServer.py
 chức năng chính: Giao tiếp 2 chiều với server thông qua Socket.IO, gửi dữ liệu đến server, nhận và thực thi lệnh từ server.
 
-2. execute_program_node:
-File: execute_program.py
-- Subscriptions: (String, '/status')
-- Subscriptions: (String, '/program_cmd')
-- Publications: (NavSatFix, '/gps/goal')
+2. delta_node
+File: Delta.py
+chức năng chính: điều khiển robot delta.
+
+3. execute_program_node:
+File: ExecuteProgram.py
 Chức năng chính: Nhận và thực thi chương trình từ server, gửi tọa độ đích đến robot.
 
-3. imu_node
-File: imu_node.py
-- Publications: (Imu, '/imu/data')
+4. imu_node
+File: IMU.py
 Chức năng chính: Đọc dữ liệu từ cảm biến IMU H30 và publish dữ liệu IMU.
 
-4. motor_controller_node
-File: motor_controller.py
-- Subscriptions: (Twist, '/cmd_vel')
-Chức năng chính: Nhận lệnh điều khiển vận tốc và tính toán tốc độ bánh xe.
+5. motor_controller_node
+File: Motorcontroller.py
+Chức năng chính: Nhận lệnh điều khiển &&  điều khiển bánh xe.
 
-5. navigator_node
-File: navigation.py
-- Subscriptions: (NavSatFix, '/gps/fix')
-- Subscriptions: (Float32, '/compass/heading')
-- Subscriptions: (NavSatFix, '/gps/goal')
-- Subscriptions: (Imu, '/imu/data')
-- Publications: (Twist, '/cmd_vel')
-- Publications: (String, '/status')
-Chức năng chính: Điều hướng robot từ điểm A đến điểm B, tránh vật cản.
+6. navigator_node
+File: Navigation.py
+Chức năng chính: Điều hướng robot đi từ điểm A đến điểm B theo tọa độ gps, tránh vật cản.
 
-6. s21c_sensors_node
-File: s21c_node.py
-- Publications: (Range, '/sensor/A')
-- Publications: (Range, '/sensor/B')
-- Publications: (Range, '/sensor/C')
-- Publications: (Range, '/sensor/D')
-- Publications: (Range, '/sensor/E')
-- Publications: (Range, '/sensor/F')
+7. s21c_sensors_node
+File: S21c.py
 Chức năng chính: Đọc dữ liệu cảm biến tiệm cận và publish dữ liệu khoảng cách.
 
-7. um982_node
-File: um982.py
-- Publications: (NavSatFix, '/gps/fix')
-- Publications: (Float32, '/compass/heading')
+8. um982_node
+File: UM982.py
 Chức năng chính: Đọc dữ liệu GPS từ module UM982 và publish dữ liệu GPS và heading.
 
 ## Cài đặt

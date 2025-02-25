@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription(
         [
-            SetEnvironmentVariable("ROS_DOMAIN_ID", "2"),
+            SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
                 package="xrover",
                 executable="navigation_node",
@@ -17,9 +17,10 @@ def generate_launch_description():
             ),
             Node(
                 package="xrover",
-                executable="connect_server_node",  # Tên của console_script (được định nghĩa trong setup.py)
-                name="connect_server", 
-                output="screen", 
+                # Tên của console_script (được định nghĩa trong setup.py)
+                executable="connect_server_node",
+                name="connect_server",
+                output="screen",
                 parameters=[],
             ),
             Node(
@@ -31,9 +32,9 @@ def generate_launch_description():
             ),
             Node(
                 package='xrover',
-                executable='motor_controller_node',  
-                name='motor_controller', 
-                output='screen', 
+                executable='motor_controller_node',
+                name='motor_controller',
+                output='screen',
                 parameters=[]
             ),
             Node(

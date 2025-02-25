@@ -2,6 +2,10 @@ import struct
 import serial
 import time
 from collections import deque
+import os
+from .SerialDeviceScanner import DevicePortScanner
+from .ConstVariable import IMU
+
 
 DATA_BUF_SIZE = 1024
 PROTOCOL_FIRST_BYTE = 0x59
@@ -47,13 +51,19 @@ class YesenseDecoder:
         self.msg_count = 0
         self.timing_count = 0
         self.msg_rate = 0
+        self.device = DevicePortScanner()
+        self.imu_port = self.device.find_imu_port()
+        self.imu_baudrate = IMU.baudrate
+        self.imu_buf_len = IMU.uart_buf_len
+        self.imu_cnt_per_seconds = IMU.cnt_per_seconds
 
     def data_proc(self, data: bytes, result: dict):
         if len(data) + self.decode_buf_len > DATA_BUF_SIZE:
             self.clear_buf_data(0, self.decode_buf_len - 1)
             return "BUF_FULL"
 
-        self.decode_data[self.decode_buf_len : self.decode_buf_len + len(data)] = data
+        self.decode_data[self.decode_buf_len: self.decode_buf_len +
+                         len(data)] = data
         self.decode_buf_len += len(data)
 
         ret = self.std_out_decoder.data_proc(
@@ -73,7 +83,8 @@ class YesenseDecoder:
 
     def clear_buf_data(self, st_idx: int, end_idx: int):
         if st_idx > end_idx or st_idx >= self.decode_buf_len:
-            print(f"Invalid indices for clear_buf_data: start={st_idx}, end={end_idx}")
+            print(
+                f"Invalid indices for clear_buf_data: start={st_idx}, end={end_idx}")
             return "PARA_ERR"
 
         cnt = end_idx - st_idx + 1
@@ -81,7 +92,7 @@ class YesenseDecoder:
             self.decode_data = bytearray(DATA_BUF_SIZE)
             self.decode_buf_len = 0
         else:
-            remaining_data = self.decode_data[end_idx + 1 : self.decode_buf_len]
+            remaining_data = self.decode_data[end_idx + 1: self.decode_buf_len]
             self.decode_data[: len(remaining_data)] = remaining_data
             self.decode_buf_len -= cnt
 
@@ -202,8 +213,9 @@ class StdOutDecoder:
         if header_len + PROTOCOL_MIN_LEN > cnt:
             return "DATA_LEN_ERR"
 
-        crc_calculated = self.crc_calc(data[ptr + 2 : ptr + 2 + header_len + 3])
-        crc_received = struct.unpack_from("<H", data, ptr + 2 + header_len + 3)[0]
+        crc_calculated = self.crc_calc(data[ptr + 2: ptr + 2 + header_len + 3])
+        crc_received = struct.unpack_from(
+            "<H", data, ptr + 2 + header_len + 3)[0]
 
         if crc_calculated != crc_received:
             return "CRC_ERR"
@@ -231,7 +243,7 @@ class StdOutDecoder:
 
         data_id = payload[0]
         data_len = payload[1]
-        data = payload[2 : 2 + data_len]
+        data = payload[2: 2 + data_len]
 
         if data_id == SENSOR_TEMP_ID:
             result["sensor_temp"] = (
@@ -249,7 +261,8 @@ class StdOutDecoder:
             ]
         elif data_id == MAGNETIC_NORM_ID:
             result["mag_norm"] = [
-                struct.unpack_from("<i", data, offset)[0] * MAG_NORM_DATA_FACTOR
+                struct.unpack_from("<i", data, offset)[
+                    0] * MAG_NORM_DATA_FACTOR
                 for offset in range(0, 12, 4)
             ]
         elif data_id == RAW_MAGNETIC_ID:
@@ -264,7 +277,8 @@ class StdOutDecoder:
             ]
         elif data_id == QUATERNION_ID:
             result["quat"] = [
-                struct.unpack_from("<i", data, offset)[0] * QUATENION_DATA_FACTOR
+                struct.unpack_from("<i", data, offset)[
+                    0] * QUATENION_DATA_FACTOR
                 for offset in range(0, 16, 4)
             ]
         elif data_id == LOCATION_ID:
@@ -354,4 +368,4 @@ def main():
 # if __name__ == "__main__":
 #     main()
 # decoder = YesenseDecoder()
-# decoder.read_from_uart("/dev/ttyACM0", 460800)
+# decoder.read_from_uart("/dev/ttyACM1", 460800)

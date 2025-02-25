@@ -4,9 +4,9 @@ from sensor_msgs.msg import Imu
 from std_msgs.msg import Header
 from geometry_msgs.msg import Quaternion
 import serial
-from .Const import *
-from .H30IMU import YesenseDecoder
+from .lib.IMULib import YesenseDecoder
 import time
+from .lib.ConstVariable import IMU
 
 
 class IMU_Node(Node):
@@ -14,10 +14,13 @@ class IMU_Node(Node):
         super().__init__("imu_node")
         self.get_logger().info("IMU Node Initialized")
         self.imu_publisher = self.create_publisher(Imu, "/imu/data", 10)
-        self.port = H30_IMU_PORT
-        self.baudrate = H30_IMU_BAUDRATE
-
         self.decoder = YesenseDecoder()
+
+        self.imu_port = self.decoder.imu_port
+        self.imu_baudrate = self.decoder.imu_baudrate
+        self.imu_cnt_per_seconds = self.decoder.imu_cnt_per_seconds
+        self.imu_buf_len = self.decoder.imu_buf_len
+        print(f"port >> {self.imu_port} baud >> {self.imu_baudrate}")
         self.imu_sensor()
         # self.uart_timer = self.create_timer(0.1, self.read_from_uart)
 
@@ -26,18 +29,18 @@ class IMU_Node(Node):
         last_time = time.time()
         try:
             with serial.Serial(
-                port=self.port, baudrate=self.baudrate, timeout=1
+                port=self.imu_port, baudrate=self.imu_baudrate, timeout=1
             ) as ser:
                 ser.flushInput()
                 while True:
-                    data = self.decoder.read_from_uart_(ser, H30_UART_RX_BUF_LEN)
+                    data = self.decoder.read_from_uart_(
+                        ser, self.imu_buf_len)
                     if isinstance(data, dict):
                         tid = data.get("tid")
                         acc = data.get("acc")
                         gyro = data.get("gyro")
                         euler = data.get("euler")
                         quat = data.get("quat")
-
                         consecutive_errors = 0
                         imu_msg = Imu()
                         imu_msg.header = Header()
@@ -74,9 +77,14 @@ class IMU_Node(Node):
                         # self.get_logger().info(
                         #     f"\neuler >> {int(euler[0])} {int(euler[1])} {int(euler[2])}"
                         # )
-                        
-                        self.imu_publisher.publish(imu_msg)
-                        self.get_logger().info("IMU data published")
+                        self.get_logger().info(
+                            f"\nroll: {roll:.2f} pitch: {pitch:.2f} yaw: {yaw:.2f}"
+                            f" \nacc >> {acc[0]:.2f} {acc[1]:.2f} {acc[2]:.2f}"
+                            f" \ngyro >> {gyro[0]:.2f} {gyro[1]:.2f} {gyro[2]:.2f}"
+                        )
+                        # self.imu_publisher.publish(imu_msg)
+
+                        # self.get_logger().info("IMU data published")
 
                     elif data == "BUF_FULL":
                         consecutive_errors += 1
@@ -95,13 +103,13 @@ class IMU_Node(Node):
                     elapsed_time = (current_time - last_time) * 1000
                     self.decoder.timing_count += elapsed_time
 
-                    if self.decoder.timing_count >= CNT_PER_SECOND:
+                    if self.decoder.timing_count >= int(self.imu_cnt_per_seconds):
                         self.decoder.msg_rate = self.decoder.msg_count
                         self.decoder.msg_count = 0
                         self.decoder.timing_count = 0
-                        self.get_logger().info(
-                            f"Message Rate: {self.decoder.msg_rate} msgs/sec"
-                        )
+                        # self.get_logger().info(
+                        #     f"Message Rate: {self.decoder.msg_rate} msgs/sec"
+                        # )
 
                     last_time = current_time
         except serial.SerialException as e:

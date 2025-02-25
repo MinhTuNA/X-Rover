@@ -1,6 +1,6 @@
 import math
 from .ScurveInterpolator import Scurve_Interpolator
-from .Device import Device
+from .serialDevice import Device
 from PySide6.QtCore import QCoreApplication, Signal as pyqtSignal, QObject
 import sys
 
@@ -8,7 +8,8 @@ import sys
 class RobotInterface(Device, QObject):
     feedbackPositionSignal = pyqtSignal(float, float, float, float)
     estopSignal = pyqtSignal()
-    def __init__(self, port = "/dev/ttyACM1"):
+
+    def __init__(self, port="/dev/ttyACM1"):
         Device.__init__(self)  # Khởi tạo lớp Device
         QObject.__init__(self)  # Khởi tạo lớp QObject
         # super().__init__()
@@ -44,10 +45,9 @@ class RobotInterface(Device, QObject):
         elif self.new_response.startswith("Delta:Robot is stopped or paused!"):
             self.estopSignal.emit()
 
-
     def open(self):
         return super().connect()
-    
+
     def disconnect(self):
         return super().disconnect()
 
@@ -55,8 +55,8 @@ class RobotInterface(Device, QObject):
         super().disconnect()
         self.comport = _new_port
         return super().connect_only()
-    
-    def robot_resume(self, is_wait = True):
+
+    def robot_resume(self, is_wait=True):
         self.send("Emergency:Resume")
         if is_wait:
             self.wait_response()
@@ -143,13 +143,15 @@ class RobotInterface(Device, QObject):
 
         if sync == False:
             if self.is_feedback_position:
-                self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
+                self.feedbackPositionSignal.emit(
+                    self.X, self.Y, self.Z, self.W)
             print(new_gcode)
             self.send(new_gcode)
-            
+
             self.wait_response()
         else:
-            new_x, new_y = self.scurve_tool.find_sync_point(self.old_X, self.old_Y, self.old_Z, self.X, self.Y, self.Z, self.rover_vel, self.con_angle, time_offset)
+            new_x, new_y = self.scurve_tool.find_sync_point(
+                self.old_X, self.old_Y, self.old_Z, self.X, self.Y, self.Z, self.rover_vel, self.con_angle, time_offset)
             new_x = round(float(new_x), 2)
             new_y = round(float(new_y), 2)
             # print (f'new x {new_x}')
@@ -158,7 +160,8 @@ class RobotInterface(Device, QObject):
             self.X = new_x
             self.Y = new_y
 
-            new_gcode = 'G01 X{0} Y{1} Z{2} W{3}'.format(new_x, new_y, self.Z, self.W)
+            new_gcode = 'G01 X{0} Y{1} Z{2} W{3}'.format(
+                new_x, new_y, self.Z, self.W)
             if F != None:
                 new_gcode = new_gcode + ' F' + str(F)
             if A != None:
@@ -171,12 +174,13 @@ class RobotInterface(Device, QObject):
                 new_gcode = new_gcode + ' J' + str(J)
 
             if self.is_feedback_position:
-                self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
+                self.feedbackPositionSignal.emit(
+                    self.X, self.Y, self.Z, self.W)
 
             self.send(new_gcode)
             self.wait_response()
 
-    def sleep(self, time_ms=1000, sync=False, is_wait = True):
+    def sleep(self, time_ms=1000, sync=False, is_wait=True):
         if sync == False:
             self.send('G04 P{}'.format(time_ms))
             if is_wait:
@@ -187,19 +191,20 @@ class RobotInterface(Device, QObject):
             new_x = self.X + distance * math.cos(math.radians(self.con_angle))
             new_y = self.Y + distance * math.sin(math.radians(self.con_angle))
             old_F = self.F
-            self.move(X = round(float(new_x), 2), Y = round(float(new_y), 2), F = abs(self.rover_vel), sync=False)
+            self.move(X=round(float(new_x), 2), Y=round(
+                float(new_y), 2), F=abs(self.rover_vel), sync=False)
             self.F = old_F
             self.scurve_tool.max_vel = self.F
-            
+
             self.X = new_x
             self.Y = new_y
-    
-    def set_z_safe(self, z_safe, is_wait = True):
+
+    def set_z_safe(self, z_safe, is_wait=True):
         self.send("M207 Z{0}".format(z_safe))
         if is_wait:
             self.wait_response()
-    
-    def set_output(self, pin, state, is_wait = True):
+
+    def set_output(self, pin, state, is_wait=True):
         gcode = ""
         if state != 0:
             gcode = 'M03 D{0}'.format(pin)
@@ -210,34 +215,34 @@ class RobotInterface(Device, QObject):
         if is_wait:
             self.wait_response()
 
-    def go_home(self, is_wait = True):
+    def go_home(self, is_wait=True):
         self.send("G28")
         if is_wait:
             self.wait_response()
-        
-        self.get_position(is_wait = is_wait)
 
-    def set_absolute(self, is_wait = True):
+        self.get_position(is_wait=is_wait)
+
+    def set_absolute(self, is_wait=True):
         self.send("G90")
         if is_wait:
             self.wait_response()
 
-    def set_relative(self, is_wait = True):
+    def set_relative(self, is_wait=True):
         self.send("G91")
         if is_wait:
             self.wait_response()
 
-    def turn_off_axis4(self, is_wait = True):
+    def turn_off_axis4(self, is_wait=True):
         self.send("M60 D0")
         if is_wait:
             self.wait_response()
 
-    def turn_on_axis4(self, is_wait = True):
+    def turn_on_axis4(self, is_wait=True):
         self.send("M60 D1")
         if is_wait:
             self.wait_response()
 
-    def read_input(self, pin, is_wait = True):
+    def read_input(self, pin, is_wait=True):
         gcode = ""
         if pin > 3:
             gcode = 'M07 A{0}'.format(pin - 4)
@@ -248,20 +253,20 @@ class RobotInterface(Device, QObject):
         if is_wait:
             self.wait_response()
 
-    def get_position(self, is_wait = True):
+    def get_position(self, is_wait=True):
         self.send("Position")
         if is_wait:
             self.wait_response()
 
-    def get_robot_model(self, is_wait = True):
+    def get_robot_model(self, is_wait=True):
         self.send("ROBOTMODEL")
         if is_wait:
             self.wait_response()
 
-    def set_sync_vel(self, rover_vel = 100):
+    def set_sync_vel(self, rover_vel=100):
         self.rover_vel = rover_vel
 
-    def set_sync_angle(self, con_angle = 0.0):
+    def set_sync_angle(self, con_angle=0.0):
         self.con_angle = float(con_angle)
 
     def __get_robot_position(self, response):
@@ -282,7 +287,7 @@ class RobotInterface(Device, QObject):
                     self.V = float(paras[i])
 
     # ex response: "I1 V0" or "A1 V2400"
-    # nếu 
+    # nếu
     def __get_robot_input(self, response):
         _key_value = response.split(' ')
         _index = int(_key_value[0][1])
@@ -292,10 +297,11 @@ class RobotInterface(Device, QObject):
             _index = _index + 4
 
         self.input_value[_index] = _value
-    
+
+
 if __name__ == "__main__":
     app = QCoreApplication(sys.argv)
     print("__test__")
     test_device = RobotInterface("COM16")
     test_device.open()
-    sys.exit(app.exec_())    
+    sys.exit(app.exec_())
