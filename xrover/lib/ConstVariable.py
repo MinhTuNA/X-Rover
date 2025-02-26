@@ -6,7 +6,8 @@ class COMMON:
     wheel_radius = 0.05
     wheel_base = 0.3
     server_address = "http://192.168.1.214:8901/rover"
-
+    tcp_server_ip = "192.168.1.230"
+    tcp_server_port = 9876
     motorKi = 0.1
     motorKp = 0.1
     motorKd = 0.1

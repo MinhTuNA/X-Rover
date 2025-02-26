@@ -10,7 +10,12 @@ class GPSDevice():
         self.device = DevicePortScanner()
         self.gps_port = self.device.find_um982_port()
         self.baudrate = GPS.baudrate
-        self.valid_keywords = ["#ADRNAVA", "#RTKSTATUSA", "#UNIHEADINGA"]
+        self.valid_keywords = [
+            "#ADRNAVA",
+            "#RTKSTATUSA",
+            "#UNIHEADINGA",
+            "#RTCMSTATUSA"
+        ]
         self.rtcm_status = None
 
     def filter_rtk_data(self, data):
@@ -24,9 +29,11 @@ class GPSDevice():
     def parse_um982_data(self, data):
         hash_messages = None
         dollar_messages = None
+        # print(f"data >> {data}")
         data_filtered = self.filter_rtk_data(data)
         if data_filtered is None:
             return
+        # print(f"data >> {data_filtered}")
         if data_filtered.startswith("#"):
             hash_messages = data_filtered
             parsed_msg = re.split(r"[;]", hash_messages)
@@ -58,8 +65,8 @@ class GPSDevice():
                 #     print(f"{key}: {value}")
 
             if heading[0] == "#RTCMSTATUSA":
-                self.get_logger().info(f"{main_data}")
                 rtcm_status_data = self.parse_rtcmstatus(main_data)
+                # print(f"RTCM >> {rtcm_status_data}")
                 if rtcm_status_data is None:
                     return
                 return rtcm_status_data
@@ -210,10 +217,10 @@ class GPSDevice():
         return None
 
     def parse_rtcmstatus(self, data):
-        if len(data) >= 20:
+        if len(data) >= 9:
             result = {
                 "type": "rtcm_status_msg",
-                "msg_iD": data[0],
+                "msg_id": data[0],
                 "msg_num": data[1],
                 "base_id": data[2],
                 "state_lites_num": data[3],
