@@ -188,7 +188,7 @@ class ConnectServer(Node):
             msg.orientation.z,
         ]
         if (sio.connected):
-            self.sio.emit("IMUDataFromXrover", {
+            self.sio.emit("IMU_data", {
                 "acc": acc,
                 "gyro": gyro,
                 "quat": quat
@@ -231,7 +231,7 @@ class ConnectServer(Node):
             "heading": self.gps_heading,
         }
         if sio.connected:
-            sio.emit("GPSdataFromXrover", location_data)
+            sio.emit("gps_data", location_data)
             self.gps_data = None
             self.gps_heading = None
 

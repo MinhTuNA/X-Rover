@@ -11,7 +11,7 @@ class ExecuteProgram(Node):
     def __init__(self):
         super().__init__("execute_program_node")
         self.get_logger().info("execute node has been started")
-        self.create_subscription(String, "/status", self.status_callback, 10)
+        self.create_subscription(String, "/rover/move_status", self.status_callback, 10)
         self.create_subscription(String, "/program_cmd", self.program_cmd_callback, 10)
         self.program_publisher = self.create_publisher(NavSatFix, "/gps/goal", 10)
         self.program = None
@@ -43,8 +43,7 @@ class ExecuteProgram(Node):
             self.get_logger().error(f"Error reading JSON: {e}")
 
     def status_callback(self, msg):
-        str_msg = json.loads(msg.data)
-        status = str_msg["status"]
+        status = msg.data
         self.get_logger().info(f"status >> {status}")
 
         if status == "done":

@@ -12,6 +12,8 @@ from .lib.NavigationController import NavigationController
 class Navigation(Node):
     def __init__(self):
         super().__init__("navigation_node")
+        self.start_lat = None
+        self.start_lon = None
         self.goal_lat = None
         self.goal_lon = None
         self.current_lat = None
@@ -21,6 +23,11 @@ class Navigation(Node):
         self.cmd_vel_pub = self.create_publisher(
             Twist,
             "/rover/vel",
+            10
+        )
+        self.rover_status_pub = self.create_publisher(
+            String,
+            "/rover/move_status",
             10
         )
         self.create_subscription(
@@ -73,13 +80,29 @@ class Navigation(Node):
         if self.detect_obstacle():
             self.avoid_obstacle()
             return
-        twist = self.navigation_controller.compute_twist(
+        
+        if self.start_lat is None and self.start_lon is None:
+            self.start_lat = self.current_lat
+            self.start_lon = self.current_lon
+            
+        linear_x, angular_z = self.navigation_controller.compute_twist_stanley(
+            start_lat=self.start_lat,
+            current_lon=self.start_lon,
             current_lat=self.current_lat,
             current_lon=self.current_lon,
             target_lat=self.goal_lat,
             target_lon=self.goal_lon,
             current_heading=self.current_heading
         )
+        if linear_x == 0 and angular_z == 0:
+            self.start_lat = self.goal_lat
+            self.start_lon = self.goal_lon
+            msg = String()
+            msg.data = "done"
+            self.rover_status_pub.publish(msg)
+        twist = Twist()
+        twist.linear.x = linear_x
+        twist.angular.z = angular_z
         self.cmd_vel_pub.publish(twist)
 
 

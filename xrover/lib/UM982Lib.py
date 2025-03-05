@@ -14,7 +14,8 @@ class GPSDevice():
             "#ADRNAVA",
             "#RTKSTATUSA",
             "#UNIHEADINGA",
-            "#RTCMSTATUSA"
+            "#RTCMSTATUSA",
+            "#BESTNAVXYZA",
         ]
         self.rtcm_status = None
 
@@ -73,6 +74,11 @@ class GPSDevice():
                 # status = rtcm_status_data["l4_num"]
                 # self.rtcm_status = status
                 # self.get_logger().info(f"RCTM: {status}")
+            if heading[0] == "#BESTNAVXYZA":
+                best_nav_xyz_data = self.parse_bestnavxyz(main_data)
+                if best_nav_xyz_data is None:
+                    return
+                return best_nav_xyz_data
 
     def ECEF_to_WGS84(self, x=None, y=None, z=None, tolerance=1e-12):
         a = 6378137.0
@@ -230,6 +236,36 @@ class GPSDevice():
                 "l4_num": data[7],
                 "l5_num": data[8],
                 "l6_num": data[9],
+            }
+            return result
+        return None
+    
+    def parse_bestnavxyz(self,data):
+        if len(data)>=25:
+            result = {
+                "type": "bestnavxyz_msg", 
+                "P_sol_status": data[0],    # solution status
+                "pos_type": data[1],        # position type
+                "P_X": data[2],             # X-coordinate of position, m
+                "P_Y": data[3],             # Y-coordinate of position, m
+                "P_Z": data[4],             # Z-coordinate of position, m
+                "P_X_sigma": data[5],       # Standard deviation of P-X, m
+                "P_Y_sigma": data[6],       # Standard deviation of P-Y, m
+                "P_Z_sigma": data[7],       # Standard deviation of P-Z, m
+                "V_sol_status": data[8],    # solution status
+                "vel_type": data[9],        # Velocity type
+                "V_X": data[10],            # Velocity along X-axis, m/s
+                "V_Y": data[11],            # Velocity along Y-axis, m/s
+                "V_Z": data[12],            # Velocity along Z-axis, m/s
+                "V_X_sigma": data[13],      # Standard deviation of V-X, m/s
+                "V_Y_sigma": data[14],      # Standard deviation of V-Y, m/s
+                "V_Z_sigma": data[15],      # Standard deviation of V-Z, m/s
+                "stn_id": data[16],         # Base Station ID, default = 0
+                "V_latency": data[17],      # A measure of latency in the velocity time tag, in seconds. Subtracting latency from epoch time gives accurate velocity
+                "diff_age": data[18],       # Differential age, s
+                "sol_age": data[19],        # Solution age, s
+                "num_sat_tracked": data[20],
+                "num_sat_used": data[21],   #.....
             }
             return result
         return None

@@ -1,7 +1,7 @@
-
 from rclpy.node import Node
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import Point
 from std_msgs.msg import Float32
 from lib.UM982Lib import GPSDevice
 from lib.ConstVariable import COMMON
@@ -10,6 +10,8 @@ import numpy as np
 import rclpy
 import socket
 import threading
+import time
+import base64
 
 
 class UM982Node(Node):
@@ -19,67 +21,44 @@ class UM982Node(Node):
         self.tcp_server_ip = COMMON.tcp_server_ip
         self.tcp_server_port = COMMON.tcp_server_port
 
-        self.gps_publisher = self.create_publisher(
-            NavSatFix,
-            "/gps/fix",
-            10
-        )
-        self.heading_publisher = self.create_publisher(
-            Float32,
-            "/gps/heading",
-            10
-        )
+        self.gps_publisher = self.create_publisher(NavSatFix, "/gps/fix", 10)
+        self.heading_publisher = self.create_publisher(Float32, "/gps/heading", 10)
+        self.gps_ecef_publisher = self.create_publisher(Point, "/gps/ecef", 10)
+        self.create_subscription(String, "/gps/rtcm", self.rtcm_callback, 10)
+
         self.gps_device = GPSDevice()
         self.gps_port = str(self.gps_device.gps_port)
         self.gps_baudrate = self.gps_device.baudrate
-        self.get_logger().info(
-            f"port >> {self.gps_port} baud >> {self.gps_baudrate}")
+        self.get_logger().info(f"port >> {self.gps_port} baud >> {self.gps_baudrate}")
         if self.gps_port is None or self.gps_baudrate is None:
             super().destroy_node()
             return
-        self.gps_serial = serial.Serial(
-            port=self.gps_port, baudrate=int(self.gps_baudrate), timeout=1)
-        rtcm_thread = threading.Thread(
-            target=self.receive_rtcm_and_send_to_serial)
-        rtcm_thread.daemon = True
-        rtcm_thread.start()
 
-        # Chạy Thread 2: Đọc GPS từ COM9
+        self.gps_serial = serial.Serial(
+            port=self.gps_port, baudrate=int(self.gps_baudrate), timeout=1
+        )
+
         gps_thread = threading.Thread(target=self.read_gps)
         gps_thread.daemon = True
         gps_thread.start()
         # self.uart_timer = self.create_timer(0.5, self.read_uart_and_publish)
 
-    def receive_rtcm_and_send_to_serial(self):
-        try:
-            # Kết nối đến TCP Server để nhận RTCM
-            tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcp_client.connect((self.tcp_server_ip, self.tcp_server_port))
-            print(
-                f"[INFO] Connected to RTCM Server {self.tcp_server_ip}:{self.tcp_server_port}")
+    def format_hex(self, data: bytes) -> str:
+        return " ".join(f"{b:02X}" for b in data)
 
-            while True:
-                data = tcp_client.recv(1024)  # Nhận 1024 bytes từ TCP Server
-                if not data:
-                    print("[INFO] No more RTCM data. Closing connection.")
-                    break  # Dừng nếu mất kết nối
-                self.gps_serial.write(data)  # Gửi RTCM vào COM9
-                # print(f"[RTCM] Sent {len(data)} bytes to gps")
-
-        except Exception as e:
-            print(f"[ERROR] RTCM Transfer Error: {e}")
-
-        finally:
-            tcp_client.close()
+    def rtcm_callback(self, msg: String):
+        rtcm_data = msg.data
+        raw_data = base64.b64decode(rtcm_data)
+        hex_str = self.format_hex(raw_data)
+        # print(f"hex >> {hex_str}")
+        self.gps_serial.write(raw_data)
 
     def read_gps(self):
         try:
             while True:
-                gps_data = self.gps_serial.readline().decode(errors='ignore').strip()
+                gps_data = self.gps_serial.readline().decode(errors="ignore").strip()
                 if gps_data:
-                    gps_data_parsed = self.gps_device.parse_um982_data(
-                        gps_data
-                    )
+                    gps_data_parsed = self.gps_device.parse_um982_data(gps_data)
                     if gps_data_parsed is None:
                         continue
                     # print(f"gps >> {gps_data_parsed}")
@@ -92,14 +71,20 @@ class UM982Node(Node):
                         pos_type = gps_data_parsed["pos_type"]
                         lat = gps_data_parsed["lat"]
                         lon = gps_data_parsed["lon"]
-                        print(
-                            f"pos type: {pos_type} \n"
-                            f"lat >> {lat} \n"
-                            f"lon >> {lon} \n"
-                        )
+                        alt = gps_data_parsed["height"]
+                        print(f"lat >> {lat} \n" f"lon >> {lon} \n" f"alt >> {alt} \n")
+                        self.publish_coordinates_data(lat=lat, lon=lon, alt=alt)
                     if gps_data_parsed["type"] == "rtcm_status_msg":
                         msg_id = gps_data_parsed["msg_id"]
                         print(f"RTCM {msg_id}")
+                    if gps_data_parsed["type"] == "bestnavxyz_msg":
+                        x = gps_data_parsed["P_X"]
+                        y = gps_data_parsed["P_Y"]
+                        z = gps_data_parsed["P_Z"]
+                        self.publish_coordinates_ecef_data(ecef_x=x, ecef_y=y, ecef_z=z)
+                        print(f"x >> {x}")
+                        print(f"y >> {y}")
+                        print(f"z >> {z}")
         except Exception as e:
             print(f"[ERROR] GPS Read Error: {e}")
 
@@ -116,11 +101,18 @@ class UM982Node(Node):
         except Exception as e:
             self.get_logger().error(f"Error while reading from UART: {e}")
 
+    def publish_coordinates_ecef_data(self, ecef_x=None, ecef_y=None, ecef_z=None):
+        gps_msg = Point()
+        gps_msg.x = float(ecef_x)
+        gps_msg.y = float(ecef_y)
+        gps_msg.z = float(ecef_z)
+        self.gps_ecef_publisher.publish(gps_msg)
+
     def publish_coordinates_data(self, lat=None, lon=None, alt=None):
         gps_msg = NavSatFix()
-        gps_msg.latitude = lat
-        gps_msg.longitude = lon
-        gps_msg.altitude = alt
+        gps_msg.latitude = float(lat)
+        gps_msg.longitude = float(lon)
+        gps_msg.altitude = float(alt)
         self.gps_publisher.publish(gps_msg)
 
     def publish_heading(self, heading=None):

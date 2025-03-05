@@ -27,12 +27,11 @@ class Delta(Node):
                 self.delta.robot_resume()
         self.delta.set_z_safe(COMMON.z_safe)
 
-        self.create_subscription(Point, "/delta/move",
-                                 self.move_to_call_back, 10)
+        self.create_subscription(Point, "/delta/move", self.move_to_call_back, 10)
+        self.create_subscription(String, "/delta/go_home", self.go_home_call_back, 10)
         self.create_subscription(
-            String, "/delta/go_home", self.go_home_call_back, 10)
-        self.create_subscription(
-            String, "/delta/request_status", self.request_status_call_back, 10)
+            String, "/delta/request_status", self.request_status_call_back, 10
+        )
 
         self.status_pub = self.create_publisher(String, "/status", 10)
 
@@ -54,7 +53,7 @@ class Delta(Node):
     def request_status_call_back(self, msg):
         status_msg = String()
 
-        if (self.delta.is_connected()):
+        if self.delta.is_connected():
             self.get_logger().info("Delta is connected")
             status = {
                 "delta": "connected",

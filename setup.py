@@ -32,6 +32,7 @@ setup(
             's21c_node = xrover.S21C:main',
             'cmd_vel_node = xrover.test_cmd_vel:main',
             'delta_node = xrover.Delta:main',
+            'tcp_client_node = xrover.TCPClient:main',
         ],
     },
 )

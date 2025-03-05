@@ -63,16 +63,16 @@ class DevicePortScanner(QObject):
 
         ports = serial.tools.list_ports.comports()
         # result = []
-        # for port in ports:
-        #     print(f"Device: {port.device}")
-        #     print(f"Name: {port.name}")
-        #     print(f"Description: {port.description}")
-        #     print(f"Manufacturer: {port.manufacturer}")
-        #     print(f"Serial Number: {port.serial_number}")
-        #     print(f"Location: {port.location}")
-        #     print(f"Vendor ID: {port.vid if port.vid else 'Unknown'}")
-        #     print(f"Product ID: {port.pid if port.pid else 'Unknown'}")
-        #     print("-" * 40)
+        for port in ports:
+            print(f"Device: {port.device}")
+            print(f"Name: {port.name}")
+            print(f"Description: {port.description}")
+            print(f"Manufacturer: {port.manufacturer}")
+            print(f"Serial Number: {port.serial_number}")
+            print(f"Location: {port.location}")
+            print(f"Vendor ID: {port.vid if port.vid else 'Unknown'}")
+            print(f"Product ID: {port.pid if port.pid else 'Unknown'}")
+            print("-" * 40)
         # try:
         #     s = serial.Serial(port)
         #     s.close()

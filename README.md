@@ -95,10 +95,13 @@ xrover/xrover/
 ## danh sách topic
 /program_cmd (String) -------------- thực hiện chương trình vd: cmd = { "program_id": id, "cmd": "run",}  
 /gps/goal (NavSatFix) -------------- tọa độ điểm đích  
-/gps/fix (NavSatFix)  -------------- tọa độ robot  
+/gps/fix (NavSatFix)  -------------- tọa độ robot hệ WGS84 (lat,lon)  
+/gps/ecef (Point) ------------------ tọa độ robot hệ ECEF  
 /gps/heading (Float32) ------------- hướng địa lý robot  
+/gps/rtcm (String) ----------------- dữ liệu RTCM  
 /imu/data (Imu) -------------------- dữ liệu cảm biến IMU  
 /rover/vel (Twist) ----------------- di chuyển rover  
+/rover/move_status (String) -------- di trạng thái di chuyển của rover  
 /delta/move (Point) ---------------- di chuyển robot delta  
 /delta/request_status (String)------ yêu cầu trả về trạng thái robot delta tại topic /status  
 /status (String) ------------------- trạng thái robot  
