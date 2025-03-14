@@ -6,7 +6,7 @@ import time
 from PySide6.QtCore import QObject
 import serial.tools
 import serial.tools.list_ports
-from .ConstVariable import *
+from ConstVariable import *
 import os
 import sys
 
@@ -194,9 +194,10 @@ class DevicePortScanner(QObject):
 
 if __name__ == "__main__":
     scanner = DevicePortScanner()
-    print(f"rs485 >> {scanner.find_rs485_port()}")
-    print(f"imu >> {scanner.find_imu_port()}")
-    print(f"um982 >> {scanner.find_um982_port()}")
-    print(f"s21c >> {scanner.find_s21c_port()}")
+    # print(f"rs485 >> {scanner.find_rs485_port()}")
+    # print(f"imu >> {scanner.find_imu_port()}")
+    # print(f"um982 >> {scanner.find_um982_port()}")
+    # print(f"s21c >> {scanner.find_s21c_port()}")
+    print(f"fs_i6 >> {scanner.find_fs_i6_port()}")
     # print("xencoder: ", scanner.find_encoder_x_port())
     # print("deltax", scanner.find_delta_x_port())

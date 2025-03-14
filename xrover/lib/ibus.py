@@ -1,6 +1,5 @@
 import time
 import serial
-from SerialDeviceScanner import DevicePortScanner
 from PySide6.QtCore import QObject, Signal as pyqtSignal, Slot
 from PySide6.QtSerialPort import QSerialPort
 
