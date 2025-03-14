@@ -33,6 +33,7 @@ setup(
             'cmd_vel_node = xrover.test_cmd_vel:main',
             'delta_node = xrover.Delta:main',
             'tcp_client_node = xrover.TCPClient:main',
+            'program_reader_node = xrover.ProgramReader:main',
         ],
     },
 )

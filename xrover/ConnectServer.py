@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix, Image, Imu
-from std_msgs.msg import Float32, String
-from geometry_msgs.msg import Twist, Point
 import cv2
 import base64
 from cv_bridge import CvBridge
 import json
 import os
 import socketio
+import asyncio
+from rclpy.node import Node
+from sensor_msgs.msg import NavSatFix, Image, Imu
+from std_msgs.msg import Float32, String
+from geometry_msgs.msg import Twist, Point
+from std_srvs.srv import Trigger
+
 from .lib.ConstVariable import COMMON
+
 sio = socketio.Client()
 
 
@@ -20,79 +24,48 @@ class ConnectServer(Node):
         self.server_address = COMMON.server_address
         self.gps_data = None
         self.gps_heading = None
+        self.navigation_client = self.create_client(Trigger, "/rover/get/mode")
+
+        # subscribers
+        self.create_subscription(NavSatFix, "/gps/fix", self.gps_callback, 10)
+        self.create_subscription(Float32, "/gps/heading", self.heading_callback, 10)
+        self.create_subscription(Imu, "/imu/data", self.imu_callback, 10)
         self.create_subscription(
-            NavSatFix,
-            "/gps/fix",
-            self.gps_callback,
-            10
-        )
-        self.create_subscription(
-            Float32,
-            "/gps/heading",
-            self.heading_callback,
-            10
-        )
-        self.create_subscription(
-            Imu,
-            "/imu/data",
-            self.imu_callback,
-            10
-        )
-        self.create_subscription(
-            Image,
-            "/camera/color/image_raw",
-            self.image_callback,
-            10
-        )
-        self.create_subscription(
-            String,
-            "/status",
-            self.status_callback,
-            10
+            Image, "/camera/color/image_raw", self.image_callback, 10
         )
 
-        self.publish_program_cmd = self.create_publisher(
-            String,
-            "/program_cmd",
-            10
-        )
-        self.rover_vel_pub = self.create_publisher(
-            Twist,
-            "/rover/vel",
-            10
-        )
-        self.move_delta_pub = self.create_publisher(
-            Point,
-            "/delta/move",
-            10
-        )
-        self.delta_go_home_pub = self.create_publisher(
-            String,
-            "delta/go_home",
-            10
-        )
+        # publishers
+        self.publish_program_cmd = self.create_publisher(String, "/program_cmd", 10)
+        self.rover_vel_pub = self.create_publisher(Twist, "/rover/vel", 10)
+        self.move_delta_pub = self.create_publisher(Point, "/delta/move", 10)
+        self.delta_go_home_pub = self.create_publisher(String, "delta/go_home", 10)
         self.request_delta_status_pub = self.create_publisher(
-            String,
-            "delta/request_status",
-            10
+            String, "delta/request_status", 10
         )
-
+        self.start_pub = self.create_publisher(String, "/start", 10)
+        self.stop_pub = self.create_publisher(String, "/stop", 10)
+        self.mode_pub = self.create_publisher(String, "/mode", 10)
         # socketio
         self.sio = sio
         self.is_connected = False
         self.hasRegisteredEvents = False
 
         if not self.hasRegisteredEvents:
-            self.sio.on('connect', self.on_connect, namespace='/rover')
-            self.sio.on('program', self.program, namespace='/rover')
-            self.sio.on('move_rover', self.rover_vel, namespace='/rover')
-            self.sio.on('run_program', self.run_program, namespace='/rover')
-            self.sio.on('delta_go_home', self.delta_go_home,
-                        namespace='/rover')
-            self.sio.on('move_delta', self.move_delta, namespace='/rover')
-            self.sio.on('disconnect', self.disconnect, namespace='/rover')
-            self.sio.on('request_delta_status',
-                        self.request_delta_status, namespace='/rover')
+            self.sio.on("connect", self.on_connect, namespace="/rover")
+            self.sio.on("path", self.save_path, namespace="/rover")
+            self.sio.on("move_rover", self.rover_vel, namespace="/rover")
+            self.sio.on("start", self.start, namespace="/rover")
+            self.sio.on("stop", self.stop, namespace="/rover")
+            self.sio.on("delta_go_home", self.delta_go_home, namespace="/rover")
+            self.sio.on("move_delta", self.move_delta, namespace="/rover")
+            self.sio.on("disconnect", self.disconnect, namespace="/rover")
+            self.sio.on(
+                "request_delta_status", self.request_delta_status, namespace="/rover"
+            )
+            self.sio.on(
+                "request_rover_status", self.request_rover_status, namespace="/rover"
+            )
+            self.sio.on("set_mode", self.set_mode, namespace="/rover")
 
     # socketio events
 
@@ -100,39 +73,45 @@ class ConnectServer(Node):
         self.is_connected = True
         print("- Connected to server")
 
-    def program(self, data):
-        # print("Received from server:", data)
-        file_path = "program.json"
+    def save_path(self, data):
+        file_path = COMMON.file_path
 
         if os.path.exists(file_path):
-            print(f"File {file_path} already exists. Updating contents...")
+            self.get_logger().info(
+                f"File {file_path} already exists. Updating contents..."
+            )
         else:
-            print(f"File {file_path} does not exist. Creating new file...")
+            self.get_logger().info(
+                f"File {file_path} does not exist. Creating new file..."
+            )
 
         with open(file_path, "w") as json_file:
             json.dump(data, json_file, indent=4)
 
-        print(f"Data has been saved to {file_path}")
+        self.get_logger().info(f"Data has been saved to {file_path}")
 
     def rover_vel(self, data):
         x = data["x"]
         z = data["z"]
         self.publish_rover_vel(x, z)
-        # print(f"cmd vel: x: {x} || z : {z}")
 
-    def run_program(self, data):
-        self.get_logger().info("Received from server:", data)
-        id = data
-        cmd = {
-            "program_id": id,
-            "cmd": "run",
-        }
-        cmd_json = json.dumps(cmd)
+    def start(self, data):
+        signal = String()
+        signal.data = "start"
+        self.start_pub.publish(signal)
+        self.get_logger().info(f"started")
 
-        msg = String()
-        msg.data = cmd_json
-        self.publish_program_cmd.publish(msg)
-        # self.get_logger().info(f"cmd: {cmd}")
+    def stop(self, data):
+        signal = String()
+        signal.data = "stop"
+        self.stop_pub.publish(signal)
+        self.get_logger().info(f"stopped")
+
+    def set_mode(self, data):
+        signal = String()
+        signal.data = str(data)
+        self.mode_pub.publish(signal)
+        self.get_logger().info(f"mode: {data}")
 
     def move_delta(self, data):
         pos = Point()
@@ -151,6 +130,35 @@ class ConnectServer(Node):
         signal = String()
         self.get_logger().info("requesting delta status")
         self.request_delta_status_pub.publish(signal)
+
+    def request_rover_status(self, data):
+        self.get_logger().info("requesting rover status")
+        mode = self.get_mode()
+
+    def get_mode(self):
+        if not self.navigation_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().error("Service not available")
+            return
+
+        request = Trigger.Request()
+        future = self.navigation_client.call_async(request)
+        future.add_done_callback(self.response_callback)
+
+    def response_callback(self, future):
+        try:
+            response = future.result()
+        except Exception as e:
+            self.get_logger().error(f"Service call failed: {e}")
+            return
+
+        if response is not None:
+            mode = response.message
+            self.get_logger().info(f"rover status: {mode}")
+            rover_status = {"mode": int(mode)}
+            # Gửi kết quả về server thông qua SocketIO
+            self.sio.emit("rover_status", rover_status, namespace="/rover")
+        else:
+            self.get_logger().error("Failed to get response")
 
     def disconnect():
         print("Disconnected from server")
@@ -179,20 +187,17 @@ class ConnectServer(Node):
             msg.linear_acceleration.y,
             msg.linear_acceleration.z,
         ]
-        gyro = [msg.angular_velocity.x,
-                msg.angular_velocity.y, msg.angular_velocity.z]
+        gyro = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
         quat = [
             msg.orientation.w,
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
         ]
-        if (sio.connected):
-            self.sio.emit("IMU_data", {
-                "acc": acc,
-                "gyro": gyro,
-                "quat": quat
-            }, namespace="/rover")
+        if sio.connected:
+            self.sio.emit(
+                "IMU_data", {"acc": acc, "gyro": gyro, "quat": quat}, namespace="/rover"
+            )
             self.get_logger().info("Send IMU data to server")
 
     def image_callback(self, msg):
@@ -200,10 +205,9 @@ class ConnectServer(Node):
             cv_image = CvBridge().imgmsg_to_cv2(msg, "bgr8")
             _, img_encoded = cv2.imencode(".jpg", cv_image)
             img_bytes = img_encoded.tobytes()
-            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
             if self.sio.connected:
-                self.sio.emit(
-                    "Frame", {"frame": img_base64}, namespace='/rover')
+                self.sio.emit("Frame", {"frame": img_base64}, namespace="/rover")
                 # self.get_logger().info("Send frame to server")
                 # print("Send frame to server")
             else:
@@ -211,11 +215,6 @@ class ConnectServer(Node):
         except Exception as e:
             self.get_logger().error(f"Error in image_callback: {e}")
 
-    def status_callback(self, msg):
-        self.get_logger().info(f"Status: {msg.data}")
-        if (self.sio.connected):
-            self.sio.emit("status", msg.data, namespace="/rover")
-            self.get_logger().info("Send status to server")
     #
     #
     #
@@ -254,7 +253,7 @@ class ConnectServer(Node):
             )
 
     def publish_rover_vel(self, x=None, z=None):
-        if (x is None or z is None):
+        if x is None or z is None:
             self.get_logger().info("x or z is None")
             return
         twist = Twist()
@@ -262,7 +261,8 @@ class ConnectServer(Node):
         twist.angular.z = float(z)
         self.rover_vel_pub.publish(twist)
         self.get_logger().info(
-            f"linear.x={twist.linear.x}, angular.z={twist.angular.z}")
+            f"linear.x={twist.linear.x}, angular.z={twist.angular.z}"
+        )
         # print(f"linear.x={twist.linear.x}, angular.z={twist.angular.z}")
 
 

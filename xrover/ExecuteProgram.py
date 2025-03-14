@@ -7,6 +7,7 @@ import json
 import os
 
 
+
 class ExecuteProgram(Node):
     def __init__(self):
         super().__init__("execute_program_node")
@@ -16,29 +17,20 @@ class ExecuteProgram(Node):
         self.program_publisher = self.create_publisher(NavSatFix, "/gps/goal", 10)
         self.program = None
         self.index = 0
+        self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.file_path = os.path.join(self.current_dir, "path.json")
 
     def program_cmd_callback(self, msg):
         cmd = json.loads(msg.data)
-        program_id = cmd["program_id"]
-        command = cmd["cmd"]
-        file_path = "program.json"
         try:
-            with open(file_path, "r") as json_file:
-                programs = json.load(json_file)
+            with open(self.file_path, "r") as json_file:
+                path = json.load(json_file)
 
-                for program in programs:
-                    if int(program_id) == int(program["id"]):
-                        # self.get_logger().info(
-                        #     f"ID: {program['id']}, Name: {program['name']}")
-                        self.program = program["coordinates"]
-                        # self.get_logger().info(f'program >> {self.program}')
-                        break
-                    # print(f"ID: {program['id']}, Name: {program['name']}")
-                    # for coord in program['coordinates']:
-                    #     print(f"Coordinate: {coord}")
-                self.send_program()
+                for line in path:
+                    self.get_logger().info(f"line >> {line}")
+                # self.send_program()
         except FileNotFoundError:
-            self.get_logger().error(f"File {file_path} not found.")
+            self.get_logger().error(f"File {self.file_path} not found.")
         except json.JSONDecodeError as e:
             self.get_logger().error(f"Error reading JSON: {e}")
 

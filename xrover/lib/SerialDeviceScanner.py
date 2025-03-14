@@ -22,6 +22,7 @@ class DevicePortScanner(QObject):
         self.um982_serial_number = GPS.serial_number
         self.imu_serial_number = IMU.serial_number
         self.ultrasonic_serial_number = ULTRASONIC.serial_number
+        self.fs_i6_serial_number = FS_I6.serial_number
         self.ports = self.list_serial_ports()
 
     def refresh(self):
@@ -90,18 +91,17 @@ class DevicePortScanner(QObject):
         return ret
 
     def list_video_ports(self):
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith("win"):
             # Không áp dụng cho Windows
-            raise EnvironmentError(
-                'This function is not applicable for Windows.')
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+            raise EnvironmentError("This function is not applicable for Windows.")
+        elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
             # Tìm tất cả các cổng video trong /dev/
-            ports = glob.glob('/dev/video*')
-        elif sys.platform.startswith('darwin'):
+            ports = glob.glob("/dev/video*")
+        elif sys.platform.startswith("darwin"):
             # Tìm các cổng video trên macOS, thường là trong /dev/
-            ports = glob.glob('/dev/video*')
+            ports = glob.glob("/dev/video*")
         else:
-            raise EnvironmentError('Unsupported platform')
+            raise EnvironmentError("Unsupported platform")
 
         _new_ports = []
 
@@ -115,11 +115,11 @@ class DevicePortScanner(QObject):
         for port in self.ports:
             try:
                 ser = serial.Serial(port, baudrate=115200, timeout=1)
-                ser.write(b'IsDelta\n')
-                response = ser.readline().decode('utf-8').strip()
+                ser.write(b"IsDelta\n")
+                response = ser.readline().decode("utf-8").strip()
                 ser.close()
                 if response == "YesDelta":
-                    return port
+                    return port.device
             except (OSError, serial.SerialException):
                 pass
         return None
@@ -128,8 +128,8 @@ class DevicePortScanner(QObject):
         for port in self.ports:
             try:
                 ser = serial.Serial(port, baudrate=115200, timeout=1)
-                ser.write(b'IsXConveyor\n')
-                response = ser.readline().decode('utf-8').strip()
+                ser.write(b"IsXConveyor\n")
+                response = ser.readline().decode("utf-8").strip()
                 ser.close()
                 if response == "YesXConveyor":
                     return port
@@ -142,8 +142,9 @@ class DevicePortScanner(QObject):
             return None
 
         # Sort the camera ports based on the numeric part of the device name
-        sorted_ports = sorted(self.camera_ports, key=lambda x: int(
-            x.replace('/dev/video', '')))
+        sorted_ports = sorted(
+            self.camera_ports, key=lambda x: int(x.replace("/dev/video", ""))
+        )
         return sorted_ports[self.hand_camera_order]
 
     def find_second_camera_port(self):
@@ -151,8 +152,9 @@ class DevicePortScanner(QObject):
             return None
 
         # Sort the camera ports based on the numeric part of the device name
-        sorted_ports = sorted(self.camera_ports, key=lambda x: int(
-            x.replace('/dev/video', '')))
+        sorted_ports = sorted(
+            self.camera_ports, key=lambda x: int(x.replace("/dev/video", ""))
+        )
         return sorted_ports[self.calib_camera_order]
 
     def find_rs485_port(self):
@@ -177,6 +179,16 @@ class DevicePortScanner(QObject):
         for port in self.ports:
             if port.serial_number == self.ultrasonic_serial_number:
                 return port.device
+        return None
+
+    def find_fs_i6_port(self):
+        delta_x_port = self.find_delta_x_port()
+        for port in self.ports:
+            if port.serial_number == self.fs_i6_serial_number:
+                if delta_x_port is not None and port.device != delta_x_port:
+                    return port.device
+                elif delta_x_port is None:
+                    return port.device
         return None
 
 
