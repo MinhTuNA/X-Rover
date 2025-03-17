@@ -6,7 +6,8 @@ from sensor_msgs.msg import Imu
 import math
 from lib.ConstVariable import COMMON, WHEEL
 from lib.ModbusDevice import Driver
-from lib.PID import PIDController
+
+# from lib.PID import PIDController
 
 
 class MotorController(Node):
@@ -21,22 +22,16 @@ class MotorController(Node):
         self.kp = COMMON.motorKp
         self.ki = COMMON.motorKi
         self.kd = COMMON.motorKd
-        self.motor_pid = PIDController(
-            kp=self.kp,
-            ki=self.ki,
-            kd=self.kd,
-            output_limits=(0, 0.2)
-        )
-        self.create_subscription(
-            Twist, "/rover/vel",
-            self.cmd_vel_callback,
-            10
-        )
+        # self.motor_pid = PIDController(
+        #     kp=self.kp, ki=self.ki, kd=self.kd, output_limits=(0, 0.2)
+        # )
+        self.create_subscription(Twist, "/rover/vel", self.cmd_vel_callback, 10)
         self.create_subscription(Imu, "/imu/data", self.imu_callback, 10)
         self.target_yaw = None
         self.current_yaw = 0.0
         self.last_time = self.get_clock().now()
         self.timer = self.create_timer(0.1, self.update)
+        self.mode = WHEEL.speed_mode
 
     def quaternion_to_euler(self, w, x, y, z):
         sinr_cosp = 2 * (w * x + y * z)
@@ -61,8 +56,7 @@ class MotorController(Node):
             msg.linear_acceleration.y,
             msg.linear_acceleration.z,
         ]
-        gyro = [msg.angular_velocity.x,
-                msg.angular_velocity.y, msg.angular_velocity.z]
+        gyro = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
         quat = [
             msg.orientation.w,
             msg.orientation.x,
@@ -83,10 +77,10 @@ class MotorController(Node):
 
     def wheel_speeds(self, linear_velocity, angular_velocity):
         omega_left = (
-            linear_velocity - (angular_velocity * self.wheel_base / 2)
+            linear_velocity + (angular_velocity * self.wheel_base / 2)
         ) / self.wheel_radius
         omega_right = (
-            linear_velocity + (angular_velocity * self.wheel_base / 2)
+            linear_velocity - (angular_velocity * self.wheel_base / 2)
         ) / self.wheel_radius
         return omega_left, omega_right
 
@@ -98,66 +92,97 @@ class MotorController(Node):
         return f_left, f_right
 
     def update(self):
-        if (self.linear_velocity == 0 and self.angular_velocity == 0):
-            self.driver.set_motor(
-                left_rpm=0, right_rpm=0,
-                left_torque=0, right_torque=0
-            )
-            self.get_logger().info(
-                f"left speed >> {0} RPM | right speed >> {0} RPM")
-            self.target_yaw = None
-            self.motor_pid.reset()
+        if self.mode == WHEEL.speed_mode:
+            if self.linear_velocity == 0 and self.angular_velocity == 0:
+                self.driver.set_motor(
+                    left_rpm=0,
+                    right_rpm=0,
+                    left_torque=300,
+                    right_torque=300,
+                    right_mode=WHEEL.speed_mode,
+                    left_mode=WHEEL.speed_mode,
+                )
+                # print(f"left speed >> {0} RPM | right speed >> {0} RPM")
 
-        elif self.linear_velocity != 0 and self.angular_velocity == 0:
-            self.target_yaw = self.current_yaw
-            yaw_error = (self.target_yaw -
-                         self.current_yaw) if self.target_yaw is not None else 0
-            current_time = self.get_clock().now()
-            dt = (current_time - self.last_time).nanoseconds / 1e9
-            self.last_time = current_time
-            yaw_correction = self.motor_pid.compute(yaw_error, dt)
-            adjusted_angular_velocity = self.angular_velocity + yaw_correction
-            omega_left, omega_right = self.wheel_speeds(
-                linear_velocity=self.linear_velocity,
-                angular_velocity=adjusted_angular_velocity
-            )
-
-            # self.get_logger().info(f"Received velocity: linear.x={msg.linear.x}, angular.z={msg.angular.z}")
-            # self.get_logger().info(f"left >> {omega_left} | right >> {omega_right}")
-            f_left, f_right = self.motor_speeds(
-                omega_left=omega_left,
-                omega_right=omega_right
-            )
-            self.driver.set_motor(
-                left_rpm=int(f_left), right_rpm=int(f_right),
-                left_torque=100, right_torque=100,
-                left_mode=WHEEL.speed_mode,
-                right_mode=WHEEL.speed_mode
-            )
-            self.get_logger().info(
-                f"left speed >> {f_left} RPM | right speed >> {f_right} RPM"
-            )
-        elif self.linear_velocity != 0 and self.angular_velocity != 0:
-            omega_left, omega_right = self.wheel_speeds(
-                linear_velocity=self.linear_velocity,
-                angular_velocity=self.angular_velocity
-            )
-            f_left, f_right = self.motor_speeds(
-                omega_left=omega_left,
-                omega_right=omega_right
-            )
-            self.driver.set_motor(
-                left_rpm=int(f_left), right_rpm=int(f_right),
-                left_torque=100, right_torque=100,
-                left_mode=WHEEL.speed_mode,
-                right_mode=WHEEL.speed_mode
-            )
-            self.get_logger().info(
-                f"left speed >> {int(f_left)} RPM | right speed >> {int(f_right)} RPM"
-            )
-        else:
-            self.get_logger().info("invalid cmd")
+            elif self.linear_velocity != 0 or self.angular_velocity != 0:
+                omega_left, omega_right = self.wheel_speeds(
+                    linear_velocity=self.linear_velocity,
+                    angular_velocity=self.angular_velocity,
+                )
+                f_left, f_right = self.motor_speeds(
+                    omega_left=omega_left, omega_right=omega_right
+                )
+                f_left = round(f_left, 4)
+                f_right = round(f_right, 4)
+                self.get_logger().info(f"f_left >> {f_left} | f_right >> {f_right}")
+                self.driver.set_motor(
+                    left_rpm=int(f_left),
+                    right_rpm=int(f_right),
+                    right_torque=600,
+                    left_torque=600,
+                    left_mode=WHEEL.speed_mode,
+                    right_mode=WHEEL.speed_mode,
+                )
+            else:
+                self.get_logger().info("invalid cmd")
+        elif self.mode == WHEEL.torque_mode:
             pass
+
+        # elif self.linear_velocity != 0 and self.angular_velocity == 0:
+        #     self.target_yaw = self.current_yaw
+        #     yaw_error = (
+        #         (self.target_yaw - self.current_yaw)
+        #         if self.target_yaw is not None
+        #         else 0
+        #     )
+        #     current_time = self.get_clock().now()
+        #     dt = (current_time - self.last_time).nanoseconds / 1e9
+        #     self.last_time = current_time
+        #     yaw_correction = self.motor_pid.compute(yaw_error, dt)
+        #     adjusted_angular_velocity = self.angular_velocity + yaw_correction
+        #     omega_left, omega_right = self.wheel_speeds(
+        #         linear_velocity=self.linear_velocity,
+        #         angular_velocity=adjusted_angular_velocity,
+        #     )
+
+        #     # self.get_logger().info(f"Received velocity: linear.x={msg.linear.x}, angular.z={msg.angular.z}")
+        #     # self.get_logger().info(f"left >> {omega_left} | right >> {omega_right}")
+        #     f_left, f_right = self.motor_speeds(
+        #         omega_left=omega_left, omega_right=omega_right
+        #     )
+        #     self.driver.set_motor(
+        #         left_rpm=int(f_left),
+        #         right_rpm=int(f_right),
+        #         left_torque=100,
+        #         right_torque=100,
+        #         left_mode=WHEEL.speed_mode,
+        #         right_mode=WHEEL.speed_mode,
+        #     )
+        #     self.get_logger().info(
+        #         f"left speed >> {f_left} RPM | right speed >> {f_right} RPM"
+        #     )
+        # elif self.linear_velocity != 0 and self.angular_velocity != 0:
+        #     omega_left, omega_right = self.wheel_speeds(
+        #         linear_velocity=self.linear_velocity,
+        #         angular_velocity=self.angular_velocity,
+        #     )
+        #     f_left, f_right = self.motor_speeds(
+        #         omega_left=omega_left, omega_right=omega_right
+        #     )
+        #     self.driver.set_motor(
+        #         left_rpm=int(f_left),
+        #         right_rpm=int(f_right),
+        #         left_torque=100,
+        #         right_torque=100,
+        #         left_mode=WHEEL.speed_mode,
+        #         right_mode=WHEEL.speed_mode,
+        #     )
+        #     self.get_logger().info(
+        #         f"left speed >> {int(f_left)} RPM | right speed >> {int(f_right)} RPM"
+        #     )
+        # else:
+        #     self.get_logger().info("invalid cmd")
+        #     pass
 
 
 def main(args=None):

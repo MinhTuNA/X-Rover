@@ -11,7 +11,7 @@ from std_srvs.srv import Trigger
 from .lib.ConstVariable import COMMON
 from .lib.NavigationController import NavigationController
 from .VariableManager import instance
-
+from .lib.ControlLib import ControlLib
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,6 +20,7 @@ class Mode(Enum):
     GPS = 0
     CAMERA = 1
     FUSION = 2
+    CONTROL = 3
 
 
 class Navigation(Node):
@@ -35,6 +36,9 @@ class Navigation(Node):
         self.is_running = False
         self.is_done = False
         self.mode = None
+        self.control_x = 0
+        self.control_z = 0
+        self.control_lib = ControlLib()
         self.navigation_controller = NavigationController()
         instance.load(COMMON.variable_path)
         self.load_variable()
@@ -47,7 +51,8 @@ class Navigation(Node):
         self.create_subscription(String, "/start", self.start_callback, 10)
         self.create_subscription(String, "/stop", self.stop_callback, 10)
         self.create_subscription(String, "/mode", self.mode_callback, 10)
-
+        self.create_subscription(Int32, "fs_i6/ch2", self.control_x_callback, 10)
+        self.create_subscription(Int32, "fs_i6/ch3", self.control_z_callback, 10)
         self.create_service(Trigger, "/rover/get/mode", self.get_mode_callback)
 
         self.timer = self.create_timer(0.1, self.navigate)
@@ -92,6 +97,16 @@ class Navigation(Node):
         twist.angular.z = angular_z
         self.cmd_vel_pub.publish(twist)
 
+    def control_x_callback(self, msg):
+        ch2_value = int(msg.data)
+        new_x = self.control_lib.rover_x(ch2_value)
+        self.control_x = new_x
+
+    def control_z_callback(self, msg):
+        ch3_value = int(msg.data)
+        new_z = self.control_lib.rover_z(ch3_value)
+        self.control_z = new_z
+
     def detect_obstacle(self):
 
         return False  # Ví dụ: không có vật cản
@@ -135,6 +150,8 @@ class Navigation(Node):
             pass
         elif self.mode == Mode.FUSION:
             pass
+        elif self.mode == Mode.CONTROL:
+            self.set_twist(self.control_x, self.control_z)
 
 
 def main(args=None):
