@@ -3,16 +3,16 @@ class COMMON:
     rover_speed = 0.1
     distance_threshold = 0.05
     angle_threshold = 5
-    wheel_radius = 0.05
-    wheel_base = 0.3
+    wheel_radius = 0.2
+    wheel_base = 0.75
     server_address = "http://192.168.1.9:8901/rover"
     tcp_server_ip = "192.168.1.19"
     tcp_server_port = 8765
     motorKi = 0.1
     motorKp = 0.1
     motorKd = 0.1
-    file_path = "/home/deltax/ros2_ws/src/x-rover/path.json"
-    variable_path = "/home/deltax/ros2_ws/src/x-rover/global_variable.ini"
+    file_path = "/home/deltax/rover_ws/src/x-rover/path.json"
+    variable_path = "/home/deltax/rover_ws/src/x-rover/global_variable.ini"
     angleKi = 0.1
     angleKp = 0.1
     angleKd = 0.1
@@ -45,7 +45,7 @@ class RS485:
 
 
 class FS_I6:
-    serial_number = None
+    serial_number = "0001"
 
 
 class WHEEL:

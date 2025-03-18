@@ -5,7 +5,7 @@ import os
 from enum import Enum
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, Imu
-from std_msgs.msg import Float32, String
+from std_msgs.msg import Float32, String, Int32
 from geometry_msgs.msg import Twist
 from std_srvs.srv import Trigger
 from .lib.ConstVariable import COMMON
@@ -22,6 +22,9 @@ class Mode(Enum):
     FUSION = 2
     CONTROL = 3
 
+class ControlMode(Enum):
+    ROVER = 1000
+    DELTA = 2000
 
 class Navigation(Node):
     def __init__(self):
@@ -38,6 +41,8 @@ class Navigation(Node):
         self.mode = None
         self.control_x = 0
         self.control_z = 0
+        self.current_swa = None
+        self.control_mode = None
         self.control_lib = ControlLib()
         self.navigation_controller = NavigationController()
         instance.load(COMMON.variable_path)
@@ -51,11 +56,12 @@ class Navigation(Node):
         self.create_subscription(String, "/start", self.start_callback, 10)
         self.create_subscription(String, "/stop", self.stop_callback, 10)
         self.create_subscription(String, "/mode", self.mode_callback, 10)
-        self.create_subscription(Int32, "fs_i6/ch2", self.control_x_callback, 10)
-        self.create_subscription(Int32, "fs_i6/ch3", self.control_z_callback, 10)
+        self.create_subscription(Int32, "fs_i6/ch1", self.control_x_callback, 10)
+        self.create_subscription(Int32, "fs_i6/ch0", self.control_z_callback, 10)
+        self.create_subscription(Int32,"fs_i6/swa",self.control_mode_callback,10)
         self.create_service(Trigger, "/rover/get/mode", self.get_mode_callback)
 
-        self.timer = self.create_timer(0.1, self.navigate)
+        self.timer = self.create_timer(0.05, self.navigate)
 
     def get_mode_callback(self, request, response):
         response.success = True
@@ -63,7 +69,7 @@ class Navigation(Node):
         return response
 
     def load_variable(self):
-        mode = instance.get("mode")
+        mode = instance.get("mode",3)
         self.mode = Mode(int(mode))
         self.get_logger().info(f"mode: {self.mode}")
 
@@ -93,19 +99,39 @@ class Navigation(Node):
 
     def set_twist(self, linear_x, angular_z):
         twist = Twist()
-        twist.linear.x = linear_x
-        twist.angular.z = angular_z
+        twist.linear.x = float(linear_x)
+        twist.angular.z = float(angular_z)
         self.cmd_vel_pub.publish(twist)
 
     def control_x_callback(self, msg):
-        ch2_value = int(msg.data)
-        new_x = self.control_lib.rover_x(ch2_value)
-        self.control_x = new_x
-
+        if self.control_mode == ControlMode.ROVER:
+            ch2_value = int(msg.data)
+            new_x = self.control_lib.rover_x(ch2_value)
+            self.control_x = new_x
+            # self.get_logger().info(f"x: {self.control_x}")
+        elif self.control_mode == ControlMode.DELTA:
+            self.control_x = 0
     def control_z_callback(self, msg):
-        ch3_value = int(msg.data)
-        new_z = self.control_lib.rover_z(ch3_value)
-        self.control_z = new_z
+        if self.control_mode == ControlMode.ROVER:
+            ch3_value = int(msg.data)
+            new_z = self.control_lib.rover_z(ch3_value)
+            self.control_z = new_z
+        elif self.control_mode == ControlMode.DELTA:
+            self.control_z = 0
+
+    def control_mode_callback(self, msg):
+        # self.get_logger().info(f"control_mode: {msg.data}")
+        if self.current_swa == int(msg.data):
+            return
+        self.current_swa = int(msg.data)
+        if msg.data == 1000:
+            self.control_mode = ControlMode.ROVER
+            self.get_logger().info("control mode: rover")
+        elif msg.data == 2000:
+            self.control_mode = ControlMode.DELTA
+            self.get_logger().info("control mode: delta")
+        else:
+            self.get_logger().info("invalid control mode")
 
     def detect_obstacle(self):
 
@@ -116,9 +142,10 @@ class Navigation(Node):
         self.set_twist(0, 0.5)
 
     def navigate(self):
-        if not self.is_running:
-            return
+        
         if self.mode == Mode.GPS:
+            if not self.is_running:
+                return
             if self.goal_lat is None or self.goal_lon is None:
                 self.get_logger().info("waiting for goal")
                 return
@@ -151,6 +178,7 @@ class Navigation(Node):
         elif self.mode == Mode.FUSION:
             pass
         elif self.mode == Mode.CONTROL:
+            self.get_logger().info(f"x: {self.control_x} z: {self.control_z}")
             self.set_twist(self.control_x, self.control_z)
 
 

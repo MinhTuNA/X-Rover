@@ -4,8 +4,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu
 import math
-from lib.ConstVariable import COMMON, WHEEL
-from lib.ModbusDevice import Driver
+from .lib.ConstVariable import COMMON, WHEEL
+from .lib.ModbusDevice import Driver
 
 # from lib.PID import PIDController
 
@@ -30,7 +30,7 @@ class MotorController(Node):
         self.target_yaw = None
         self.current_yaw = 0.0
         self.last_time = self.get_clock().now()
-        self.timer = self.create_timer(0.1, self.update)
+        self.timer = self.create_timer(0.05, self.update)
         self.mode = WHEEL.speed_mode
 
     def quaternion_to_euler(self, w, x, y, z):
@@ -94,15 +94,15 @@ class MotorController(Node):
     def update(self):
         if self.mode == WHEEL.speed_mode:
             if self.linear_velocity == 0 and self.angular_velocity == 0:
-                self.driver.set_motor(
-                    left_rpm=0,
-                    right_rpm=0,
-                    left_torque=300,
-                    right_torque=300,
-                    right_mode=WHEEL.speed_mode,
-                    left_mode=WHEEL.speed_mode,
-                )
-                # print(f"left speed >> {0} RPM | right speed >> {0} RPM")
+                # self.driver.set_motor(
+                #     left_rpm=0,
+                #     right_rpm=0,
+                #     left_torque=300,
+                #     right_torque=300,
+                #     right_mode=WHEEL.speed_mode,
+                #     left_mode=WHEEL.speed_mode,
+                # )
+                self.get_logger().info(f"left speed >> {0} RPM | right speed >> {0} RPM")
 
             elif self.linear_velocity != 0 or self.angular_velocity != 0:
                 omega_left, omega_right = self.wheel_speeds(
@@ -115,14 +115,14 @@ class MotorController(Node):
                 f_left = round(f_left, 4)
                 f_right = round(f_right, 4)
                 self.get_logger().info(f"f_left >> {f_left} | f_right >> {f_right}")
-                self.driver.set_motor(
-                    left_rpm=int(f_left),
-                    right_rpm=int(f_right),
-                    right_torque=600,
-                    left_torque=600,
-                    left_mode=WHEEL.speed_mode,
-                    right_mode=WHEEL.speed_mode,
-                )
+                # self.driver.set_motor(
+                #     left_rpm=int(f_left),
+                #     right_rpm=int(f_right),
+                #     right_torque=600,
+                #     left_torque=600,
+                #     left_mode=WHEEL.speed_mode,
+                #     right_mode=WHEEL.speed_mode,
+                # )
             else:
                 self.get_logger().info("invalid cmd")
         elif self.mode == WHEEL.torque_mode:

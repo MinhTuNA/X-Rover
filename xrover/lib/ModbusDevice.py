@@ -1,6 +1,6 @@
-from SerialDeviceScanner import DevicePortScanner
-from ConstVariable import RS485, WHEEL
-from ModbusDeviceScanner import DeviceModbusScanner
+from .SerialDeviceScanner import DevicePortScanner
+from .ConstVariable import RS485, WHEEL
+from .ModbusDeviceScanner import DeviceModbusScanner
 import serial
 
 
@@ -59,7 +59,7 @@ class Driver(ModbusDevice):
     def __init__(self, timeout=1, parity="N", stopbits=1, bytesize=8):
         super().__init__(timeout, parity, stopbits, bytesize)
         # self.driver_address = self.modbus_scanner.find_driver_device()
-        self.driver_address = None
+        self.driver_address = 0x01
         self.is_driver_connect = False
         self.speed_mode = WHEEL.speed_mode
         self.torque_mode = WHEEL.torque_mode

@@ -7,7 +7,7 @@ import serial
 from .lib.IMULib import YesenseDecoder
 import time
 from .lib.ConstVariable import IMU
-
+from .lib.SerialDeviceScanner import DevicePortScanner
 
 class IMU_Node(Node):
     def __init__(self):
@@ -15,11 +15,11 @@ class IMU_Node(Node):
         self.get_logger().info("IMU Node Initialized")
         self.imu_publisher = self.create_publisher(Imu, "/imu/data", 10)
         self.decoder = YesenseDecoder()
-
-        self.imu_port = self.decoder.imu_port
-        self.imu_baudrate = self.decoder.imu_baudrate
-        self.imu_cnt_per_seconds = self.decoder.imu_cnt_per_seconds
-        self.imu_buf_len = self.decoder.imu_buf_len
+        self.device = DevicePortScanner()
+        self.imu_port = self.device.find_imu_port()
+        self.imu_baudrate = IMU.baudrate
+        self.imu_buf_len = IMU.uart_buf_len
+        self.imu_cnt_per_seconds = IMU.cnt_per_seconds
         print(f"port >> {self.imu_port} baud >> {self.imu_baudrate}")
         self.imu_sensor()
         # self.uart_timer = self.create_timer(0.1, self.read_from_uart)

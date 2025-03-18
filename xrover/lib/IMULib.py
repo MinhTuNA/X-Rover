@@ -3,8 +3,7 @@ import serial
 import time
 from collections import deque
 import os
-from SerialDeviceScanner import DevicePortScanner
-from ConstVariable import IMU
+from .ConstVariable import IMU
 
 
 DATA_BUF_SIZE = 1024
@@ -51,11 +50,6 @@ class YesenseDecoder:
         self.msg_count = 0
         self.timing_count = 0
         self.msg_rate = 0
-        self.device = DevicePortScanner()
-        self.imu_port = self.device.find_imu_port()
-        self.imu_baudrate = IMU.baudrate
-        self.imu_buf_len = IMU.uart_buf_len
-        self.imu_cnt_per_seconds = IMU.cnt_per_seconds
 
     def data_proc(self, data: bytes, result: dict):
         if len(data) + self.decode_buf_len > DATA_BUF_SIZE:
