@@ -3,18 +3,20 @@ from rclpy.node import Node
 from .lib.ibus import IBusBM
 from std_msgs.msg import Int32
 from .lib.SerialDeviceScanner import DevicePortScanner
+import signal
 
 
 class FS_I6(Node):
     def __init__(self):
         super().__init__("fs_i6_node")
         scanner = DevicePortScanner()
-        self.fs_i6_port = scanner.find_fs_i6_port()
+        ports = scanner.get_ports()
+        self.fs_i6_port = scanner.find_fs_i6_port(ports)
         self.get_logger().info(f"FS_I6 port: {self.fs_i6_port}")
         self.ibus = IBusBM(self.fs_i6_port)
         self.ibus.run_ibus()
-        self.create_timer(0.001, self.ibus.loop)
-        self.create_timer(0.001, self.read_chanel)
+        self.timer_loop = self.create_timer(0.005, self.ibus.loop)
+        self.timer_read_chanel = self.create_timer(0.005, self.read_chanel)
         self.ch0_pub = self.create_publisher(Int32, "fs_i6/ch0", 10)
         self.ch1_pub = self.create_publisher(Int32, "fs_i6/ch1", 10)
         self.ch2_pub = self.create_publisher(Int32, "fs_i6/ch2", 10)
@@ -58,24 +60,27 @@ class FS_I6(Node):
         self.swc_pub.publish(swc)
         self.swd_pub.publish(swd)
         # self.get_logger().info(f"ch0: {self.ibus.channel[0]}")
-        # self.get_logger().info(f"ch1: {self.ibus.channel[1]}")
-        # self.get_logger().info(f"ch2: {self.ibus.channel[2]}")
-        # self.get_logger().info(f"ch3: {self.ibus.channel[3]}")
-        # self.get_logger().info(f"ch4: {self.ibus.channel[4]}")
-        # self.get_logger().info(f"ch5: {self.ibus.channel[5]}")
-        # self.get_logger().info(f"ch6: {self.ibus.channel[6]}")
+
+    def handle_destroy(self):
+        self.ibus.ibus_destroy()
+        self.timer_loop.cancel()
+        self.timer_read_chanel.cancel()
+        self.get_logger().info("FS_I6 port closed")
+        self.get_logger().info("FS_I6 node destroyed")
+        self.destroy_node()
 
 
 def main(args=None):
     rclpy.init(args=args)
+    fs_i6 = FS_I6()
     try:
-        fs_i6 = FS_I6()
         rclpy.spin(fs_i6)
-    except Exception as e:
-        print(e)
+    except KeyboardInterrupt:
+        pass
     finally:
-        fs_i6.destroy_node()
-        rclpy.shutdown()
+        fs_i6.handle_destroy()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

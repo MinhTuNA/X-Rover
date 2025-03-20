@@ -23,7 +23,11 @@ class DevicePortScanner(QObject):
         self.imu_serial_number = IMU.serial_number
         self.ultrasonic_serial_number = ULTRASONIC.serial_number
         self.fs_i6_serial_number = FS_I6.serial_number
-        self.ports = self.list_serial_ports()
+        
+
+    def get_ports(self):
+        list_ports = self.list_serial_ports()
+        return list_ports
 
     def refresh(self):
         self.ports = self.list_serial_ports()
@@ -64,16 +68,16 @@ class DevicePortScanner(QObject):
 
         ports = serial.tools.list_ports.comports()
         # result = []
-        for port in ports:
-            print(f"Device: {port.device}")
-            print(f"Name: {port.name}")
-            print(f"Description: {port.description}")
-            print(f"Manufacturer: {port.manufacturer}")
-            print(f"Serial Number: {port.serial_number}")
-            print(f"Location: {port.location}")
-            print(f"Vendor ID: {port.vid if port.vid else 'Unknown'}")
-            print(f"Product ID: {port.pid if port.pid else 'Unknown'}")
-            print("-" * 40)
+        # for port in ports:
+        #     print(f"Device: {port.device}")
+        #     print(f"Name: {port.name}")
+        #     print(f"Description: {port.description}")
+        #     print(f"Manufacturer: {port.manufacturer}")
+        #     print(f"Serial Number: {port.serial_number}")
+        #     print(f"Location: {port.location}")
+        #     print(f"Vendor ID: {port.vid if port.vid else 'Unknown'}")
+        #     print(f"Product ID: {port.pid if port.pid else 'Unknown'}")
+        #     print("-" * 40)
         # try:
         #     s = serial.Serial(port)
         #     s.close()
@@ -111,8 +115,10 @@ class DevicePortScanner(QObject):
         # print(_new_ports)
         return _new_ports
 
-    def find_delta_x_port(self):
-        for port in self.ports:
+    def find_delta_x_port(self, ports):
+        if len(ports) == 0:
+            return None
+        for port in ports:
             try:
                 ser = serial.Serial(port, baudrate=115200, timeout=1)
                 ser.write(b"IsDelta\n")
@@ -124,8 +130,10 @@ class DevicePortScanner(QObject):
                 pass
         return None
 
-    def find_encoder_x_port(self):
-        for port in self.ports:
+    def find_encoder_x_port(self, ports):
+        if len(ports) == 0:
+            return None
+        for port in ports:
             try:
                 ser = serial.Serial(port, baudrate=115200, timeout=1)
                 ser.write(b"IsXConveyor\n")
@@ -137,52 +145,44 @@ class DevicePortScanner(QObject):
                 pass
         return None
 
-    def find_first_camera_port(self):
-        if len(self.camera_ports) < 2:
+    
+
+    def find_rs485_port(self, ports):
+        if len(ports) == 0:
             return None
-
-        # Sort the camera ports based on the numeric part of the device name
-        sorted_ports = sorted(
-            self.camera_ports, key=lambda x: int(x.replace("/dev/video", ""))
-        )
-        return sorted_ports[self.hand_camera_order]
-
-    def find_second_camera_port(self):
-        if len(self.camera_ports) < 2:
-            return None
-
-        # Sort the camera ports based on the numeric part of the device name
-        sorted_ports = sorted(
-            self.camera_ports, key=lambda x: int(x.replace("/dev/video", ""))
-        )
-        return sorted_ports[self.calib_camera_order]
-
-    def find_rs485_port(self):
-        for port in self.ports:
+        for port in ports:
             if port.serial_number == self.rs485_serial_number:
                 return port.device
         return None
 
-    def find_imu_port(self):
-        for port in self.ports:
+    def find_imu_port(self, ports):
+        if len(ports) == 0:
+            return None
+        for port in ports:
             if port.serial_number == self.imu_serial_number:
                 return port.device
         return None
 
-    def find_um982_port(self):
-        for port in self.ports:
+    def find_um982_port(self, ports):
+        if len(ports) == 0:
+            return None
+        for port in ports:
             if port.serial_number == self.um982_serial_number:
                 return str(port.device)
         return None
 
-    def find_s21c_port(self):
-        for port in self.ports:
+    def find_s21c_port(self, ports):
+        if len(ports) == 0:
+            return None
+        for port in ports:
             if port.serial_number == self.ultrasonic_serial_number:
                 return port.device
         return None
 
-    def find_fs_i6_port(self):
-        for port in self.ports:
+    def find_fs_i6_port(self, ports):
+        if len(ports) == 0:
+            return None
+        for port in ports:
             if port.serial_number == self.fs_i6_serial_number:
                 return port.device
         return None

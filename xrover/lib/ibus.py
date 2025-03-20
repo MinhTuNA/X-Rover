@@ -2,11 +2,11 @@ import time
 import serial
 from PySide6.QtCore import QObject, Signal as pyqtSignal, Slot
 from PySide6.QtSerialPort import QSerialPort
-
+import atexit
 import threading
 
 
-class IBusBM(QObject):
+class IBusBM:
     PROTOCOL_LENGTH = 0x20  # Tổng độ dài tối đa của gói tin
     PROTOCOL_OVERHEAD = 3  # Overhead: 1 byte lệnh + 2 byte checksum
     PROTOCOL_TIMEGAP = 3  # Thời gian chờ giữa các gói (ms)
@@ -26,22 +26,11 @@ class IBusBM(QObject):
 
     IBusBMfirst = None
 
-    ch0_signal = pyqtSignal(int)
-    ch1_signal = pyqtSignal(int)
-    ch2_signal = pyqtSignal(int)
-    ch3_signal = pyqtSignal(int)
-    ch4_signal = pyqtSignal(int)
-    ch5_signal = pyqtSignal(int)
-    swa_signal = pyqtSignal(int)
-    swb_signal = pyqtSignal(int)
-    swc_signal = pyqtSignal(int)
-    swd_signal = pyqtSignal(int)
-
     def __init__(self, ibus_port):
         super().__init__()
-        self.stop_ibus = threading.Event()
         self.ibus_port = ibus_port
-
+        self.ibus_baudrate = 115200
+        self.stream = None
         self.state = self.STATE_DISCARD
         self.last = self.current_millis()
         self.ptr = 0
@@ -71,6 +60,9 @@ class IBusBM(QObject):
         return int(time.monotonic() * 1000)
 
     def loop(self):
+        if self.stream is None:
+            return
+
         if self.IBusBMnext:
             self.IBusBMnext.loop()
 
@@ -204,8 +196,9 @@ class IBusBM(QObject):
         if self.ibus_port is not None:
             try:
                 self.stream = serial.Serial(
-                    self.ibus_port, baudrate=115200, timeout=0.001
+                    self.ibus_port, baudrate=self.ibus_baudrate, timeout=1
                 )
+                print(f"connected to {self.ibus_port}")
             except Exception as e:
                 print(f"[IBUS] Error: {e}")
                 self.stream = None
@@ -216,19 +209,12 @@ class IBusBM(QObject):
         #     time.sleep(0.001)
 
     def handleEmitChanel(self):
-        self.ch0_signal.emit(self.readChannel(0))
-        self.ch1_signal.emit(self.readChannel(1))
-        self.ch2_signal.emit(self.readChannel(2))
-        self.ch3_signal.emit(self.readChannel(3))
-        self.ch4_signal.emit(self.readChannel(4))
-        self.ch5_signal.emit(self.readChannel(5))
-        self.swa_signal.emit(self.readChannel(6))
-        self.swb_signal.emit(self.readChannel(7))
-        self.swc_signal.emit(self.readChannel(8))
-        self.swd_signal.emit(self.readChannel(9))
+        pass
 
-    def stop(self):
-        self.stop_ibus.set()
+    def ibus_destroy(self):
+        self.stream.reset_input_buffer()
+        self.stream.close()
+        self.stream = None
 
 
 # Ví dụ sử dụng

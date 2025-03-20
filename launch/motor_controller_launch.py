@@ -9,10 +9,24 @@ def generate_launch_description():
         [
             SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
-                package="xrover",  # Tên gói
-                executable="motor_controller_node",  # Tên của console_script (được định nghĩa trong setup.py)
-                name="motor_controller",  # Tên node
-                output="screen",  # Hiển thị đầu ra trên màn hình
+                package="xrover",
+                executable="fs_i6_node",
+                name="fs_i6",
+                output="screen",
+                parameters=[],
+            ),
+            Node(
+                package="xrover",
+                executable="motor_controller_node",
+                name="motor_controller",
+                output="screen",
+                parameters=[],
+            ),
+            Node(
+                package="xrover",  # Tên
+                executable="navigation_node",
+                name="navigation",
+                output="screen",
                 parameters=[],
             ),
         ]

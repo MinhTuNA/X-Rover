@@ -1,13 +1,21 @@
 import sys
 import json
+from enum import Enum
 from PySide6.QtWidgets import QApplication
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32
 from .lib.RobotInterface import RobotInterface
 from .lib.SerialDeviceScanner import DevicePortScanner
 from .lib.ConstVariable import COMMON
+from .lib.ControlLib import ControlLib
+import time
+
+
+class ControlMode(Enum):
+    ROVER = 1000
+    DELTA = 2000
 
 
 class Delta(Node):
@@ -15,25 +23,85 @@ class Delta(Node):
         super().__init__("delta_node")
         self.get_logger().info("Delta Node Started")
         self.z_safe = None
+        self.z_min = -621.2
+        self.z_max = -831.2
+        self.Z = 0
         self.is_first_connect = True
-
-        self.scanner = DevicePortScanner()
-        self.delta_port = self.scanner.find_delta_x_port()
-        self.delta = RobotInterface(port=self.delta_port)
-        self.delta.open()
-        if self.delta.is_connected() == True:
-            if self.is_first_connect == True:
-                self.is_first_connect = False
-                self.delta.robot_resume()
-        self.delta.set_z_safe(COMMON.z_safe)
-
+        self.control_lib = ControlLib()
+        # self.scanner = DevicePortScanner()
+        # self.delta_port = self.scanner.find_delta_x_port()
+        # self.delta = RobotInterface(port=self.delta_port)
+        # self.delta.open()
+        # if self.delta.is_connected() == True:
+        #     if self.is_first_connect == True:
+        #         self.is_first_connect = False
+        #         self.delta.robot_resume()
+        # self.delta.set_z_safe(COMMON.z_safe)
+        self.control_mode = ControlMode.ROVER
+        self.current_swa = None
+        self.current_vrb = 0
         self.create_subscription(Point, "/delta/move", self.move_to_call_back, 10)
         self.create_subscription(String, "/delta/go_home", self.go_home_call_back, 10)
         self.create_subscription(
             String, "/delta/request_status", self.request_status_call_back, 10
         )
-
+        self.create_subscription(Int32, "fs_i6/ch1", self.y_callback, 10)
+        self.create_subscription(Int32, "fs_i6/ch0", self.x_callback, 10)
+        self.create_subscription(Int32, "fs_i6/ch5", self.z_callback, 10)
+        self.create_subscription(Int32, "fs_i6/swa", self.control_mode_callback, 10)
         self.status_pub = self.create_publisher(String, "/status", 10)
+
+    def control_mode_callback(self, msg):
+        # self.get_logger().info(f"control_mode: {msg.data}")
+        if self.current_swa == int(msg.data):
+            return
+        self.current_swa = int(msg.data)
+        if msg.data == 1000:
+            self.control_mode = ControlMode.ROVER
+            self.get_logger().info("control mode: rover")
+        elif msg.data == 2000:
+            self.control_mode = ControlMode.DELTA
+            self.get_logger().info("control mode: delta")
+        else:
+            self.get_logger().info("invalid control mode")
+
+    def z_callback(self, msg):
+        if self.control_mode == ControlMode.DELTA:
+            value = int(msg.data)
+            if abs(value - self.current_vrb) > 1:
+                self.current_vrb = value
+                new_z = self.map_joystick_to_range(value, self.z_min, self.z_max)
+                # self.get_logger().info(f"z: {new_z}")
+                z_value = new_z - self.Z
+                self.Z = new_z
+                z_value = round(z_value, 2)
+                self.get_logger().info(f"z_value: {z_value}")
+        else:
+            pass
+
+    def x_callback(self, msg):
+        if self.control_mode == ControlMode.DELTA:
+            value = int(msg.data)
+            new_value = self.control_lib.delta_x(value)
+            if new_value == 1:
+                self.get_logger().info("x: +1")
+            elif new_value == -1:
+                self.get_logger().info("x: -1")
+            time.sleep(0.03)
+        else:
+            pass
+
+    def y_callback(self, msg):
+        if self.control_mode == ControlMode.DELTA:
+            value = int(msg.data)
+            new_value = self.control_lib.delta_y(value)
+            if new_value == 1:
+                self.get_logger().info("y: +1")
+            elif new_value == -1:
+                self.get_logger().info("y: -1")
+            time.sleep(0.03)
+        else:
+            pass
 
     def move_to_call_back(self, msg):
         x = msg.x
@@ -65,6 +133,19 @@ class Delta(Node):
         status_msg.data = json.dumps(status)
         self.status_pub.publish(status_msg)
 
+    def map_joystick_to_range(
+        self, joy_value, out_min, out_max, joy_min=1000, joy_max=2000
+    ):
+        value = out_min + ((joy_value - joy_min) / (joy_max - joy_min)) * (
+            out_max - out_min
+        )
+        return round(value, 2)
+
+    def handle_destroy(self):
+        # self.delta.close()
+        self.destroy_node()
+        self.get_logger().info("Delta Node Stopped")
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -76,8 +157,9 @@ def main(args=None):
     except Exception as e:
         print(e)
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        node.handle_destroy()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

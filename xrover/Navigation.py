@@ -22,9 +22,11 @@ class Mode(Enum):
     FUSION = 2
     CONTROL = 3
 
+
 class ControlMode(Enum):
     ROVER = 1000
     DELTA = 2000
+
 
 class Navigation(Node):
     def __init__(self):
@@ -58,7 +60,7 @@ class Navigation(Node):
         self.create_subscription(String, "/mode", self.mode_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch1", self.control_x_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch0", self.control_z_callback, 10)
-        self.create_subscription(Int32,"fs_i6/swa",self.control_mode_callback,10)
+        self.create_subscription(Int32, "fs_i6/swa", self.control_mode_callback, 10)
         self.create_service(Trigger, "/rover/get/mode", self.get_mode_callback)
 
         self.timer = self.create_timer(0.05, self.navigate)
@@ -69,7 +71,7 @@ class Navigation(Node):
         return response
 
     def load_variable(self):
-        mode = instance.get("mode",3)
+        mode = instance.get("mode", 3)
         self.mode = Mode(int(mode))
         self.get_logger().info(f"mode: {self.mode}")
 
@@ -111,6 +113,7 @@ class Navigation(Node):
             # self.get_logger().info(f"x: {self.control_x}")
         elif self.control_mode == ControlMode.DELTA:
             self.control_x = 0
+
     def control_z_callback(self, msg):
         if self.control_mode == ControlMode.ROVER:
             ch3_value = int(msg.data)
@@ -142,7 +145,7 @@ class Navigation(Node):
         self.set_twist(0, 0.5)
 
     def navigate(self):
-        
+
         if self.mode == Mode.GPS:
             if not self.is_running:
                 return
@@ -178,16 +181,25 @@ class Navigation(Node):
         elif self.mode == Mode.FUSION:
             pass
         elif self.mode == Mode.CONTROL:
-            self.get_logger().info(f"x: {self.control_x} z: {self.control_z}")
+            # self.get_logger().info(f"x: {self.control_x} z: {self.control_z}")
             self.set_twist(self.control_x, self.control_z)
+
+    def handle_destroy(self):
+        self.get_logger().info("navigation node has been stopped")
+        self.destroy_node()
 
 
 def main(args=None):
     rclpy.init(args=args)
     navigation = Navigation()
-    rclpy.spin(navigation)
-    navigation.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(navigation)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        navigation.handle_destroy()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

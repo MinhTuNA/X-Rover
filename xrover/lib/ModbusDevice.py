@@ -7,12 +7,9 @@ import serial
 class ModbusDevice:
     is_first_connect = True
 
-    def __init__(self, timeout=1, parity="N", stopbits=1, bytesize=8):
-        self.device = DevicePortScanner()
-        self.rs485_port = self.device.find_rs485_port()
+    def __init__(self, rs485_port):
+        self.rs485_port = rs485_port
         self.rs485_baudrate = RS485.baudrate
-        # self.modbus_scanner = DeviceModbusScanner(
-        #     port=self.rs485_port, baudrate=self.rs485_baudrate)
         self.write_mode = RS485.write_mode
         self.read_mode = RS485.read_mode
         if ModbusDevice.is_first_connect:
@@ -33,7 +30,10 @@ class ModbusDevice:
         crc_l, crc_h = self.calculate_crc16_modbus(header + payload)
 
         data = bytes(header + payload + [crc_l] + [crc_h])
-        print(f"data: {data.hex().upper()}")
+        hex_str = " ".join(
+            data.hex().upper()[i : i + 2] for i in range(0, len(data.hex()), 2)
+        )
+        # print(f"data: {hex_str}")
         self.rs485.write(data)
 
     def split_into_bytes(self, value):
@@ -54,15 +54,22 @@ class ModbusDevice:
                     crc >>= 1
         return crc & 0xFF, (crc >> 8) & 0xFF
 
+    def cleanup(self):
+        self.rs485.close()
+
 
 class Driver(ModbusDevice):
-    def __init__(self, timeout=1, parity="N", stopbits=1, bytesize=8):
-        super().__init__(timeout, parity, stopbits, bytesize)
+    def __init__(self, rs485_port):
+        super().__init__(rs485_port)
         # self.driver_address = self.modbus_scanner.find_driver_device()
         self.driver_address = 0x01
         self.is_driver_connect = False
         self.speed_mode = WHEEL.speed_mode
         self.torque_mode = WHEEL.torque_mode
+        self.left_kp = WHEEL.m_left_kp
+        self.right_kp = WHEEL.m_right_kp
+        self.left_ki = WHEEL.m_left_ki
+        self.right_ki = WHEEL.m_right_ki
 
     def set_motor(
         self,
@@ -124,7 +131,7 @@ class Driver(ModbusDevice):
             right_ki_low,
         ]
         self.send_to_driver(header=header, payload=payload)
-        self.wait_response(timeout=1)
+        # self.wait_response(timeout=1)
 
     def request_data_from_driver(self, start_address=0, num_register=0):
         if self.driver_address <= 0 or self.driver_address > 127:
@@ -202,8 +209,8 @@ class Driver(ModbusDevice):
 
 
 class Battery(ModbusDevice):
-    def __init__(self, timeout=1, parity="N", stopbits=1, bytesize=8):
-        super().__init__(timeout, parity, stopbits, bytesize)
+    def __init__(self, rs485_port):
+        super().__init__(rs485_port)
 
 
 # if __name__ == "__main__":

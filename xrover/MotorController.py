@@ -6,6 +6,7 @@ from sensor_msgs.msg import Imu
 import math
 from .lib.ConstVariable import COMMON, WHEEL
 from .lib.ModbusDevice import Driver
+from .lib.SerialDeviceScanner import DevicePortScanner
 
 # from lib.PID import PIDController
 
@@ -16,7 +17,11 @@ class MotorController(Node):
         self.get_logger().info("motor controller has been started")
         self.wheel_radius = COMMON.wheel_radius
         self.wheel_base = COMMON.wheel_base
-        self.driver = Driver()
+        scanner = DevicePortScanner()
+        ports = scanner.get_ports()
+        self.rs485_port = scanner.find_rs485_port(ports)
+        self.get_logger().info(f"RS485 port: {self.rs485_port}")
+        self.driver = Driver(self.rs485_port)
         self.linear_velocity = 0
         self.angular_velocity = 0
         self.kp = COMMON.motorKp
@@ -94,15 +99,17 @@ class MotorController(Node):
     def update(self):
         if self.mode == WHEEL.speed_mode:
             if self.linear_velocity == 0 and self.angular_velocity == 0:
-                # self.driver.set_motor(
-                #     left_rpm=0,
-                #     right_rpm=0,
-                #     left_torque=300,
-                #     right_torque=300,
-                #     right_mode=WHEEL.speed_mode,
-                #     left_mode=WHEEL.speed_mode,
-                # )
-                self.get_logger().info(f"left speed >> {0} RPM | right speed >> {0} RPM")
+                self.driver.set_motor(
+                    left_rpm=0,
+                    right_rpm=0,
+                    left_torque=300,
+                    right_torque=300,
+                    right_mode=WHEEL.speed_mode,
+                    left_mode=WHEEL.speed_mode,
+                )
+                self.get_logger().info(
+                    f"left speed >> {0} RPM | right speed >> {0} RPM"
+                )
 
             elif self.linear_velocity != 0 or self.angular_velocity != 0:
                 omega_left, omega_right = self.wheel_speeds(
@@ -115,14 +122,14 @@ class MotorController(Node):
                 f_left = round(f_left, 4)
                 f_right = round(f_right, 4)
                 self.get_logger().info(f"f_left >> {f_left} | f_right >> {f_right}")
-                # self.driver.set_motor(
-                #     left_rpm=int(f_left),
-                #     right_rpm=int(f_right),
-                #     right_torque=600,
-                #     left_torque=600,
-                #     left_mode=WHEEL.speed_mode,
-                #     right_mode=WHEEL.speed_mode,
-                # )
+                self.driver.set_motor(
+                    left_rpm=int(f_left),
+                    right_rpm=int(f_right),
+                    right_torque=600,
+                    left_torque=600,
+                    left_mode=WHEEL.speed_mode,
+                    right_mode=WHEEL.speed_mode,
+                )
             else:
                 self.get_logger().info("invalid cmd")
         elif self.mode == WHEEL.torque_mode:
@@ -184,13 +191,24 @@ class MotorController(Node):
         #     self.get_logger().info("invalid cmd")
         #     pass
 
+    def handle_destroy(self):
+        self.timer.cancel()
+        self.driver.cleanup()
+        self.get_logger().info("motor controller has been stopped")
+        self.destroy_node()
+
 
 def main(args=None):
     rclpy.init(args=args)
     motor = MotorController()
-    rclpy.spin(motor)
-    motor.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(motor)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        motor.handle_destroy()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

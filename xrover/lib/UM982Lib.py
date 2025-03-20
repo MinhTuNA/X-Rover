@@ -5,10 +5,11 @@ import os
 from .ConstVariable import GPS
 
 
-class GPSDevice():
+class GPSDevice:
     def __init__(self):
         self.device = DevicePortScanner()
-        self.gps_port = self.device.find_um982_port()
+        self.ports = self.device.list_serial_ports()
+        self.gps_port = self.device.find_um982_port(self.ports)
         self.baudrate = GPS.baudrate
         self.valid_keywords = [
             "#ADRNAVA",
@@ -89,20 +90,20 @@ class GPSDevice():
         # khoảng cách p trên mặt phẳng x y
         p = math.sqrt(x**2 + y**2)
         # ước tính ban đầu cho vĩ độ
-        fi0 = math.atan2(z, p*(1-e2))
+        fi0 = math.atan2(z, p * (1 - e2))
 
         while True:
             sin_fi = math.sin(fi0)
-            N = a / math.sqrt(1-e2*sin_fi**2)
-            new_fi = math.atan2(z+e2*N*sin_fi, p)
+            N = a / math.sqrt(1 - e2 * sin_fi**2)
+            new_fi = math.atan2(z + e2 * N * sin_fi, p)
             if abs(new_fi - fi0) < tolerance:
                 fi = new_fi
                 break
             fi0 = new_fi
 
-        N = a/math.sqrt(1 - e2*math.sin(fi)**2)
+        N = a / math.sqrt(1 - e2 * math.sin(fi) ** 2)
         # độ cao
-        alt = p/math.cos(fi)-N
+        alt = p / math.cos(fi) - N
 
         lat = math.degrees(fi)
         lon = math.degrees(_lon)
@@ -239,33 +240,35 @@ class GPSDevice():
             }
             return result
         return None
-    
-    def parse_bestnavxyz(self,data):
-        if len(data)>=25:
+
+    def parse_bestnavxyz(self, data):
+        if len(data) >= 25:
             result = {
-                "type": "bestnavxyz_msg", 
-                "P_sol_status": data[0],    # solution status
-                "pos_type": data[1],        # position type
-                "P_X": data[2],             # X-coordinate of position, m
-                "P_Y": data[3],             # Y-coordinate of position, m
-                "P_Z": data[4],             # Z-coordinate of position, m
-                "P_X_sigma": data[5],       # Standard deviation of P-X, m
-                "P_Y_sigma": data[6],       # Standard deviation of P-Y, m
-                "P_Z_sigma": data[7],       # Standard deviation of P-Z, m
-                "V_sol_status": data[8],    # solution status
-                "vel_type": data[9],        # Velocity type
-                "V_X": data[10],            # Velocity along X-axis, m/s
-                "V_Y": data[11],            # Velocity along Y-axis, m/s
-                "V_Z": data[12],            # Velocity along Z-axis, m/s
-                "V_X_sigma": data[13],      # Standard deviation of V-X, m/s
-                "V_Y_sigma": data[14],      # Standard deviation of V-Y, m/s
-                "V_Z_sigma": data[15],      # Standard deviation of V-Z, m/s
-                "stn_id": data[16],         # Base Station ID, default = 0
-                "V_latency": data[17],      # A measure of latency in the velocity time tag, in seconds. Subtracting latency from epoch time gives accurate velocity
-                "diff_age": data[18],       # Differential age, s
-                "sol_age": data[19],        # Solution age, s
+                "type": "bestnavxyz_msg",
+                "P_sol_status": data[0],  # solution status
+                "pos_type": data[1],  # position type
+                "P_X": data[2],  # X-coordinate of position, m
+                "P_Y": data[3],  # Y-coordinate of position, m
+                "P_Z": data[4],  # Z-coordinate of position, m
+                "P_X_sigma": data[5],  # Standard deviation of P-X, m
+                "P_Y_sigma": data[6],  # Standard deviation of P-Y, m
+                "P_Z_sigma": data[7],  # Standard deviation of P-Z, m
+                "V_sol_status": data[8],  # solution status
+                "vel_type": data[9],  # Velocity type
+                "V_X": data[10],  # Velocity along X-axis, m/s
+                "V_Y": data[11],  # Velocity along Y-axis, m/s
+                "V_Z": data[12],  # Velocity along Z-axis, m/s
+                "V_X_sigma": data[13],  # Standard deviation of V-X, m/s
+                "V_Y_sigma": data[14],  # Standard deviation of V-Y, m/s
+                "V_Z_sigma": data[15],  # Standard deviation of V-Z, m/s
+                "stn_id": data[16],  # Base Station ID, default = 0
+                "V_latency": data[
+                    17
+                ],  # A measure of latency in the velocity time tag, in seconds. Subtracting latency from epoch time gives accurate velocity
+                "diff_age": data[18],  # Differential age, s
+                "sol_age": data[19],  # Solution age, s
                 "num_sat_tracked": data[20],
-                "num_sat_used": data[21],   #.....
+                "num_sat_used": data[21],  # .....
             }
             return result
         return None

@@ -12,7 +12,7 @@ class ControlLib(QObject):
         self.joystick_current_z = 0
 
     def rover_x(self, value):
-        
+
         deadzone_min = 1500
         deadzone_max = 1520
         center = 1515
@@ -41,3 +41,29 @@ class ControlLib(QObject):
             out_max - out_min
         )
         return round(value, 2)
+
+    def delta_x(self, value):
+        deadzone_min = 1500
+        deadzone_max = 1520
+        center = 1515
+        new_x_value = 0
+        if deadzone_min <= value <= deadzone_max:
+            new_x_value = 0
+        elif value > deadzone_max:
+            new_x_value = 1
+        elif value < deadzone_min:
+            new_x_value = -1
+        return new_x_value
+
+    def delta_y(self, value):
+        deadzone_min = 1500
+        deadzone_max = 1520
+        center = 1515
+        new_x_value = 0
+        if deadzone_min <= value <= deadzone_max:
+            new_x_value = 0
+        elif value > deadzone_max:
+            new_x_value = 1
+        elif value < deadzone_min:
+            new_x_value = -1
+        return new_x_value
