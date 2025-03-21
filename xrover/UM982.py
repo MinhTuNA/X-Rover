@@ -46,6 +46,8 @@ class UM982Node(Node):
     def format_hex(self, data: bytes) -> str:
         return " ".join(f"{b:02X}" for b in data)
 
+
+    # send rtcm data to gps
     def rtcm_callback(self, msg: String):
         rtcm_data = msg.data
         raw_data = base64.b64decode(rtcm_data)

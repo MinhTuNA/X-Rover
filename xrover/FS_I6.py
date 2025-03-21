@@ -4,17 +4,29 @@ from .lib.ibus import IBusBM
 from std_msgs.msg import Int32
 from .lib.SerialDeviceScanner import DevicePortScanner
 import signal
-
+import time
 
 class FS_I6(Node):
     def __init__(self):
         super().__init__("fs_i6_node")
+        self.signal_green = self.create_publisher(Int32,"signal_light/green",10)
+        self.signal_yellow = self.create_publisher(Int32,"signal_light/yellow",10)
+        self.signal_red = self.create_publisher(Int32,"signal_light/red",10)
+        self.signal_buzz = self.create_publisher(Int32,"signal_light/buzz",10)
         scanner = DevicePortScanner()
         ports = scanner.get_ports()
         self.fs_i6_port = scanner.find_fs_i6_port(ports)
         self.get_logger().info(f"FS_I6 port: {self.fs_i6_port}")
         self.ibus = IBusBM(self.fs_i6_port)
+        self.signal_green.publish(Int32(data=0))
+        self.signal_yellow.publish(Int32(data=0))
+        self.signal_red.publish(Int32(data=1))
+        self.signal_buzz.publish(Int32(data=0))
+        self.ibus.reset_ibus_port()
+        time.sleep(3)
         self.ibus.run_ibus()
+        self.signal_green.publish(Int32(data=1))
+        self.signal_red.publish(Int32(data=0))
         self.timer_loop = self.create_timer(0.005, self.ibus.loop)
         self.timer_read_chanel = self.create_timer(0.005, self.read_chanel)
         self.ch0_pub = self.create_publisher(Int32, "fs_i6/ch0", 10)

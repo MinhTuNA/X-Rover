@@ -4,7 +4,7 @@ from PySide6.QtCore import QObject, Signal as pyqtSignal, Slot
 from PySide6.QtSerialPort import QSerialPort
 import atexit
 import threading
-
+import subprocess
 
 class IBusBM:
     PROTOCOL_LENGTH = 0x20  # Tổng độ dài tối đa của gói tin
@@ -207,6 +207,13 @@ class IBusBM:
         #     self.loop()
         #     self.handleEmitChanel()
         #     time.sleep(0.001)
+    
+    def reset_ibus_port(self):
+        try:
+            subprocess.run(["stty", "-F", self.ibus_port, "sane"], check=True)
+            print(f"Successfully reset {self.ibus_port}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error resetting {self.ibus_port}: {e}")
 
     def handleEmitChanel(self):
         pass

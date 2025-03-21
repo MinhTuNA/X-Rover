@@ -2,6 +2,7 @@ import sys
 import json
 from enum import Enum
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Signal as pyqtSignal, Slot
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point
@@ -25,18 +26,13 @@ class Delta(Node):
         self.z_safe = None
         self.z_min = -621.2
         self.z_max = -831.2
-        self.Z = 0
         self.is_first_connect = True
         self.control_lib = ControlLib()
-        # self.scanner = DevicePortScanner()
-        # self.delta_port = self.scanner.find_delta_x_port()
-        # self.delta = RobotInterface(port=self.delta_port)
-        # self.delta.open()
-        # if self.delta.is_connected() == True:
-        #     if self.is_first_connect == True:
-        #         self.is_first_connect = False
-        #         self.delta.robot_resume()
-        # self.delta.set_z_safe(COMMON.z_safe)
+        self.scanner = DevicePortScanner()
+        self.ports = self.scanner.list_serial_ports()
+        self.delta_port = self.scanner.find_delta_x_port(self.ports)
+        self.delta = None
+        self.start_delta()
         self.control_mode = ControlMode.ROVER
         self.current_swa = None
         self.current_vrb = 0
@@ -48,8 +44,22 @@ class Delta(Node):
         self.create_subscription(Int32, "fs_i6/ch1", self.y_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch0", self.x_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch5", self.z_callback, 10)
-        self.create_subscription(Int32, "fs_i6/swa", self.control_mode_callback, 10)
+        self.create_subscription(Int32, "fs_i6/swd", self.control_mode_callback, 10)
         self.status_pub = self.create_publisher(String, "/status", 10)
+
+    def start_delta(self):
+        self.delta = RobotInterface(port=self.delta_port)
+        self.delta.open()
+        if self.delta.is_connected() == True:
+            if self.is_first_connect == True:
+                self.is_first_connect = False
+                self.delta.robot_resume()
+        self.delta.set_z_safe(COMMON.z_safe)
+        self.delta.feedbackPositionSignal.connect(self.feedback_position_callback)
+        self.delta.get_position()
+    
+    def feedback_position_callback(self, x, y, z, w):
+        self.get_logger().info(f"x: {x}, y: {y}, z: {z}, w: {w}")
 
     def control_mode_callback(self, msg):
         # self.get_logger().info(f"control_mode: {msg.data}")
@@ -72,8 +82,7 @@ class Delta(Node):
                 self.current_vrb = value
                 new_z = self.map_joystick_to_range(value, self.z_min, self.z_max)
                 # self.get_logger().info(f"z: {new_z}")
-                z_value = new_z - self.Z
-                self.Z = new_z
+                z_value = new_z - self.delta.Z
                 z_value = round(z_value, 2)
                 self.get_logger().info(f"z_value: {z_value}")
         else:

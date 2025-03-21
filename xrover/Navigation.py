@@ -60,7 +60,7 @@ class Navigation(Node):
         self.create_subscription(String, "/mode", self.mode_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch1", self.control_x_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch0", self.control_z_callback, 10)
-        self.create_subscription(Int32, "fs_i6/swa", self.control_mode_callback, 10)
+        self.create_subscription(Int32, "fs_i6/swd", self.control_mode_callback, 10)
         self.create_service(Trigger, "/rover/get/mode", self.get_mode_callback)
 
         self.timer = self.create_timer(0.05, self.navigate)

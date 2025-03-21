@@ -29,5 +29,12 @@ def generate_launch_description():
                 output="screen",
                 parameters=[],
             ),
+            Node(
+                package="xrover",
+                executable="signal_light_node",
+                name="signal_light",
+                output="screen",
+                parameters=[],
+            ),
         ]
     )

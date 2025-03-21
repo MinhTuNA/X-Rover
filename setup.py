@@ -37,6 +37,7 @@ setup(
             "tcp_client_node = xrover.TCPClient:main",
             "program_reader_node = xrover.ProgramReader:main",
             "fs_i6_node = xrover.FS_I6:main",
+            "signal_light_node = xrover.SignalLight:main",
         ],
     },
 )

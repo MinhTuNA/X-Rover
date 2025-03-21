@@ -1,5 +1,5 @@
 class COMMON:
-    z_safe = -700
+    z_safe = -831.2
     rover_speed = 0.1
     distance_threshold = 0.05
     angle_threshold = 5
