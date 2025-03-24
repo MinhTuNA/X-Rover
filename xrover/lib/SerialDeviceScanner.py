@@ -68,16 +68,6 @@ class DevicePortScanner(QObject):
 
         ports = serial.tools.list_ports.comports()
         # result = []
-        # for port in ports:
-        #     print(f"Device: {port.device}")
-        #     print(f"Name: {port.name}")
-        #     print(f"Description: {port.description}")
-        #     print(f"Manufacturer: {port.manufacturer}")
-        #     print(f"Serial Number: {port.serial_number}")
-        #     print(f"Location: {port.location}")
-        #     print(f"Vendor ID: {port.vid if port.vid else 'Unknown'}")
-        #     print(f"Product ID: {port.pid if port.pid else 'Unknown'}")
-        #     print("-" * 40)
         # try:
         #     s = serial.Serial(port)
         #     s.close()
@@ -119,15 +109,8 @@ class DevicePortScanner(QObject):
         if len(ports) == 0:
             return None
         for port in ports:
-            try:
-                ser = serial.Serial(port, baudrate=115200, timeout=1)
-                ser.write(b"IsDelta\n")
-                response = ser.readline().decode("utf-8").strip()
-                ser.close()
-                if response == "YesDelta":
-                    return port.device
-            except (OSError, serial.SerialException):
-                pass
+            if port.serial_number == DELTA.serial_number:
+                return port.device
         return None
 
     def find_encoder_x_port(self, ports):
@@ -190,10 +173,11 @@ class DevicePortScanner(QObject):
 
 if __name__ == "__main__":
     scanner = DevicePortScanner()
+    ports = scanner.list_serial_ports()
     # print(f"rs485 >> {scanner.find_rs485_port()}")
     # print(f"imu >> {scanner.find_imu_port()}")
     # print(f"um982 >> {scanner.find_um982_port()}")
     # print(f"s21c >> {scanner.find_s21c_port()}")
     # print(f"fs_i6 >> {scanner.find_fs_i6_port()}")
     # print("xencoder: ", scanner.find_encoder_x_port())
-    # print("deltax", scanner.find_delta_x_port())
+    print("deltax", scanner.find_delta_x_port(ports))

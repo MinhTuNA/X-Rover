@@ -43,8 +43,8 @@ class ControlLib(QObject):
         return round(value, 2)
 
     def delta_x(self, value):
-        deadzone_min = 1500
-        deadzone_max = 1520
+        deadzone_min = 1450
+        deadzone_max = 1550
         center = 1515
         new_x_value = 0
         if deadzone_min <= value <= deadzone_max:
@@ -56,8 +56,8 @@ class ControlLib(QObject):
         return new_x_value
 
     def delta_y(self, value):
-        deadzone_min = 1500
-        deadzone_max = 1520
+        deadzone_min = 1450
+        deadzone_max = 1550
         center = 1515
         new_x_value = 0
         if deadzone_min <= value <= deadzone_max:

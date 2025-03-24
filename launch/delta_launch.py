@@ -13,5 +13,12 @@ def generate_launch_description():
                 output="screen", 
                 parameters=[],
             ),
+            Node(
+                package="xrover",
+                executable="fs_i6_node",
+                name="fs_i6", 
+                output="screen", 
+                parameters=[],
+            )
         ]
     )

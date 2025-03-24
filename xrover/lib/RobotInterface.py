@@ -18,7 +18,7 @@ class RobotInterface(Device, QObject):
         self.confirm_msg = "YesDelta"
         self.request_msg = "IsDelta"
 
-        self.X, self.Y, self.Z, self.W, self.F, self.A, self.S, self.E, self.J = 0, 0, 0, 0, 500, 8000, 30, 40, 255000
+        self.X, self.Y, self.Z, self.W, self.F, self.A, self.S, self.E, self.J = 0, 0, 0, 0, 500, 8000, 30, 40, 155000
         self.old_X, self.old_Y, self.old_Z = self.X, self.Y, self.Z
         self.input_value = [0, 0, 0, 0, 0, 0]
 
@@ -285,7 +285,7 @@ class RobotInterface(Device, QObject):
                     self.U = float(paras[i])
                 if i == 5:
                     self.V = float(paras[i])
-
+        self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
     # ex response: "I1 V0" or "A1 V2400"
     # nếu
     def __get_robot_input(self, response):

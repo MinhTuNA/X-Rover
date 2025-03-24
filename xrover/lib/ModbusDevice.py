@@ -1,8 +1,6 @@
-from .SerialDeviceScanner import DevicePortScanner
 from .ConstVariable import RS485, WHEEL
-from .ModbusDeviceScanner import DeviceModbusScanner
 import serial
-
+import time
 
 class ModbusDevice:
     is_first_connect = True
@@ -21,7 +19,7 @@ class ModbusDevice:
             self.rs485 = serial.Serial(
                 port=self.rs485_port, baudrate=self.rs485_baudrate, timeout=1
             )
-            print("Successfully connected to motor driver")
+            print("Successfully connected to motor driver with baudrate: ", self.rs485_baudrate)
         except Exception as e:
             print(f"Connection to motor driver failed: {e}")
             raise
@@ -33,7 +31,7 @@ class ModbusDevice:
         hex_str = " ".join(
             data.hex().upper()[i : i + 2] for i in range(0, len(data.hex()), 2)
         )
-        # print(f"data: {hex_str}")
+        print(f"data: {hex_str}")
         self.rs485.write(data)
 
     def split_into_bytes(self, value):
@@ -213,6 +211,10 @@ class Battery(ModbusDevice):
         super().__init__(rs485_port)
 
 
-# if __name__ == "__main__":
-#     driver_device = Driver()
-#     battery_device = Battery()
+if __name__ == "__main__":
+    rs485_port = "/dev/ttyUSB0"
+    driver_device = Driver(rs485_port)
+    while True:
+        driver_device.set_motor(left_rpm=50, right_rpm=50)
+        time.sleep(0.5)
+    # battery_device = Battery()

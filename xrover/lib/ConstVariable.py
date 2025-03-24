@@ -17,6 +17,9 @@ class COMMON:
     angleKp = 0.1
     angleKd = 0.1
 
+class DELTA:
+    baudrate = 115200
+    serial_number = "15341270"
 
 class IMU:
     baudrate = 460800
@@ -38,7 +41,7 @@ class ULTRASONIC:
 
 
 class RS485:
-    baudrate = 9600
+    baudrate = 115200
     serial_number = "B003LK5S"
     read_mode = 0x03
     write_mode = 0x10

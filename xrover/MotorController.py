@@ -107,9 +107,9 @@ class MotorController(Node):
                     right_mode=WHEEL.speed_mode,
                     left_mode=WHEEL.speed_mode,
                 )
-                self.get_logger().info(
-                    f"left speed >> {0} RPM | right speed >> {0} RPM"
-                )
+                # self.get_logger().info(
+                #     f"left speed >> {0} RPM | right speed >> {0} RPM"
+                # )
 
             elif self.linear_velocity != 0 or self.angular_velocity != 0:
                 omega_left, omega_right = self.wheel_speeds(
@@ -121,7 +121,7 @@ class MotorController(Node):
                 )
                 f_left = round(f_left, 4)
                 f_right = round(f_right, 4)
-                self.get_logger().info(f"f_left >> {f_left} | f_right >> {f_right}")
+                # self.get_logger().info(f"f_left >> {f_left} | f_right >> {f_right}")
                 self.driver.set_motor(
                     left_rpm=int(f_left),
                     right_rpm=int(f_right),
