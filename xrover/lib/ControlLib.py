@@ -4,10 +4,10 @@ from PySide6.QtCore import QObject, Signal as pyqtSignal, QTimer
 class ControlLib(QObject):
     def __init__(self):
         super().__init__()
-        self.z_min = -1
-        self.z_max = 1  # rad/s
-        self.x_min = -1
-        self.x_max = 1  # m/s
+        self.z_min = -0.5
+        self.z_max = 0.5  # rad/s
+        self.x_min = -0.5
+        self.x_max = 0.5  # m/s
         self.joystick_current_x = 0
         self.joystick_current_z = 0
 
@@ -24,8 +24,8 @@ class ControlLib(QObject):
         return new_x_value
 
     def rover_z(self, value):
-        deadzone_min = 1495
-        deadzone_max = 1505
+        deadzone_min = 1400
+        deadzone_max = 1600
         center = 1500
         new_z_value = 0
         if deadzone_min <= value <= deadzone_max:

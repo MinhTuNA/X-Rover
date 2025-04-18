@@ -12,9 +12,10 @@ class NavigationController:
         target_lat,
         target_lon,
         current_heading,
-        linear_vel_x = 0.1,
+        linear_vel_x = 0.3,
         k=1.0,
         epsilon=1e-5,
+        max_angular_z=0.5,
     ):
         if current_heading < 0 or current_heading > 360:
           print("invalid heading")
@@ -62,8 +63,10 @@ class NavigationController:
 
         linear_x = v
         angular_z = steering_angle
+        if angular_z >= max_angular_z: 
+            angular_z = max_angular_z
 
-        return linear_x, angular_z
+        return round(linear_x, 2), round(angular_z, 2)
     
     
     @staticmethod
@@ -75,6 +78,8 @@ class NavigationController:
             y = R * Δlat
         Đầu ra tính theo mét.
         """
+        lat, lon, ref_lat, ref_lon = map(float, (lat, lon, ref_lat, ref_lon))
+
         R = 6371000  # bán kính Trái Đất (m)
         x = R * math.radians(lon - ref_lon) * math.cos(math.radians(ref_lat))
         y = R * math.radians(lat - ref_lat)

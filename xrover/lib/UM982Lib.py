@@ -1,16 +1,18 @@
-from .SerialDeviceScanner import DevicePortScanner
 import math
 import re
 import os
-from .ConstVariable import GPS
 
 
 class GPSDevice:
     def __init__(self):
-        self.device = DevicePortScanner()
-        self.ports = self.device.list_serial_ports()
-        self.gps_port = self.device.find_um982_port(self.ports)
-        self.baudrate = GPS.baudrate
+        self.ADRNAVA_CMD = "ADRNAVA"
+        self.RTKSTATUSA_CMD = "RTKSTATUSA"
+        self.UNIHEADINGA_CMD = "UNIHEADINGA"
+        self.RTCMSTATUSA_CMD = "RTCMSTATUSA"
+        self.BESTNAVXYZA_CMD = "BESTNAVXYZA"
+        self.FRESET_CMD = "FRESET"
+        self.SAVECONFIG_CMD = "SAVECONFIG"
+        
         self.valid_keywords = [
             "#ADRNAVA",
             "#RTKSTATUSA",

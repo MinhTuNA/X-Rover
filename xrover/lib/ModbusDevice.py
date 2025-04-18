@@ -31,7 +31,7 @@ class ModbusDevice:
         hex_str = " ".join(
             data.hex().upper()[i : i + 2] for i in range(0, len(data.hex()), 2)
         )
-        print(f"data: {hex_str}")
+        # print(f"data: {hex_str}")
         self.rs485.write(data)
 
     def split_into_bytes(self, value):

@@ -13,33 +13,32 @@ from .lib.ControlLib import ControlLib
 import time
 import message_filters
 
+
 class ControlMode(Enum):
     ROVER = 1000
     DELTA = 2000
+
 
 class SwaMode(Enum):
     SWA_ON = 1000
     SWA_OFF = 2000
 
+
 class Delta(Node):
-    
+
     def __init__(self):
         super().__init__("delta_node")
         self.get_logger().info("Delta Node Started")
-        
         # Các tham số cấu hình cho trục Z và các thông số di chuyển khác
         self.z_safe = None
         self.z_min = -621.2
         self.z_max = -831.2
-        self.A_z = 600
-        self.S_z = 50
-        self.E_z = 50
-        self.F_z = 300
-        self.A = 500
-        self.S = 300
-        self.E = 300
-        self.F = 300
-        
+
+        self.signal_green = self.create_publisher(Int32, "signal_light/green", 10)
+        self.signal_yellow = self.create_publisher(Int32, "signal_light/yellow", 10)
+        self.signal_red = self.create_publisher(Int32, "signal_light/red", 10)
+        self.signal_buzz = self.create_publisher(Int32, "signal_light/buzz", 10)
+
         self.is_first_swa = True
         self.is_first_connect = True
         self.control_lib = ControlLib()
@@ -52,43 +51,42 @@ class Delta(Node):
         self.current_swa = None
         self.current_swd = None
         self.current_vrb = 0
-        
-        self.update_delta_position_timer = self.create_timer(0.0001, self.update_delta_position_callback)
+
+        self.update_delta_position_timer = self.create_timer(
+            0.003, self.update_delta_position_callback
+        )
 
         # Các subscriber của ROS
         self.create_subscription(Point, "/delta/move", self.move_to_call_back, 10)
         self.create_subscription(String, "/delta/go_home", self.go_home_call_back, 10)
-        self.create_subscription(String, "/delta/request_status", self.request_status_call_back, 10)
-        
+        self.create_subscription(
+            String, "/delta/request_status", self.request_status_call_back, 10
+        )
+
         self.create_subscription(Int32, "fs_i6/ch1", self.y_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch0", self.x_callback, 10)
         self.create_subscription(Int32, "fs_i6/ch5", self.z_callback, 10)
 
         self.create_subscription(Int32, "fs_i6/swa", self.swa_callback, 10)
 
-        # Khởi tạo message_filters Subscribers với đúng thứ tự: node, topic, message type.
-        # self.y_sub = message_filters.Subscriber(self, Int32, "fs_i6/ch1")
-        # self.x_sub = message_filters.Subscriber(self, Int32, "fs_i6/ch0")
-        # self.z_sub = message_filters.Subscriber(self, Int32, "fs_i6/ch5")
         self.create_subscription(Int32, "fs_i6/swd", self.control_mode_callback, 10)
         self.status_pub = self.create_publisher(String, "/status", 10)
-        
-        # Sử dụng ApproximateTimeSynchronizer để đồng bộ 3 kênh
-        # self.ts = message_filters.ApproximateTimeSynchronizer(
-        #     [self.x_sub, self.y_sub, self.z_sub],
-        #     queue_size=100,
-        #     slop=0.1,
-        #     allow_headerless=True  
-        # )
-        # self.ts.registerCallback(self.synced_callback)
-        
-        # Khởi tạo biến lưu trữ trạng thái cho 3 trục
+
         self.current_x = 0
         self.current_y = 0
         self.current_z = 0
 
     def update_delta_position_callback(self):
-        self.delta.move_relative(X=self.current_x, Y=self.current_y, F=self.F, A=self.A, S=self.S, E=self.E)
+        # self.get_logger().info(f"move - x: {self.current_x}, y: {self.current_y}")
+        self.delta.move_relative(
+            X=self.current_x,
+            Y=self.current_y,
+            F=self.F,
+            A=self.A,
+            S=self.S,
+            E=self.E,
+        )
+
         self.current_x = 0
         self.current_y = 0
 
@@ -103,9 +101,9 @@ class Delta(Node):
             return
         self.current_swa = int(msg.data)
         if self.current_swa == SwaMode.SWA_ON.value:
-            self.delta.move(W=50)
+            self.delta.move(W=-70)
         elif self.current_swa == SwaMode.SWA_OFF.value:
-            self.delta.move(W=-50)
+            self.delta.move(W=70)
         else:
             pass
 
@@ -118,9 +116,13 @@ class Delta(Node):
                 self.delta.robot_resume()
                 self.get_logger().info("delta is connected")
         self.delta.go_home()
+        self.signal_green.publish(Int32(data=1))
+        self.signal_yellow.publish(Int32(data=0))
+        self.signal_red.publish(Int32(data=0))
+        self.signal_buzz.publish(Int32(data=0))
         self.delta.feedbackPositionSignal.connect(self.feedback_position_callback)
         self.delta.get_position()
-    
+
     def feedback_position_callback(self, x, y, z, w):
         self.get_logger().info(f"x: {x}, y: {y}, z: {z}, w: {w}")
 
@@ -137,7 +139,7 @@ class Delta(Node):
             self.get_logger().info("control mode: delta")
         else:
             self.get_logger().info("invalid control mode")
-    
+
     def z_callback(self, msg):
         if self.control_mode == ControlMode.DELTA:
             value = int(msg.data)
@@ -147,7 +149,9 @@ class Delta(Node):
                 z_value = new_z - self.delta.Z
                 z_value = round(z_value, 2)
                 self.get_logger().info(f"z_value: {z_value}")
-                self.delta.move_relative(Z=z_value, F=self.F_z, A=self.A_z, S=self.S_z, E=self.E_z)
+                self.delta.move_relative(
+                    Z=z_value, F=self.F_z, A=self.A_z, S=self.S_z, E=self.E_z
+                )
                 # self.current_z = z_value
         else:
             pass
@@ -157,11 +161,11 @@ class Delta(Node):
             value = int(msg.data)
             new_value = self.control_lib.delta_x(value)
             if new_value == 1:
-                self.get_logger().info("x: +2")
+                # self.get_logger().info("x: +2")
                 # self.delta.move_relative(X=2, F=self.F, A=self.A, S=self.S, E=self.E)
                 self.current_x = 2
             elif new_value == -1:
-                self.get_logger().info("x: -2")
+                # self.get_logger().info("x: -2")
                 # self.delta.move_relative(X=-2, F=self.F, A=self.A, S=self.S, E=self.E)
                 self.current_x = -2
         else:
@@ -172,11 +176,11 @@ class Delta(Node):
             value = int(msg.data)
             new_value = self.control_lib.delta_y(value)
             if new_value == 1:
-                self.get_logger().info("y: +2")
+                # self.get_logger().info("y: +2")
                 # self.delta.move_relative(Y=2, F=self.F, A=self.A, S=self.S, E=self.E)
                 self.current_y = 2
             elif new_value == -1:
-                self.get_logger().info("y: -2")
+                # self.get_logger().info("y: -2")
                 # self.delta.move_relative(Y=-2, F=self.F, A=self.A, S=self.S, E=self.E)
                 self.current_y = -2
         else:
@@ -207,13 +211,13 @@ class Delta(Node):
         z_value_raw = int(z_msg.data)
         new_z = self.map_joystick_to_range(z_value_raw, self.z_min, self.z_max)
         # Giả sử self.delta có thuộc tính Z lưu vị trí hiện tại của trục z
-        z_adjust = new_z - self.delta.Z  
+        z_adjust = new_z - self.delta.Z
         self.current_z = round(z_adjust, 2)
-        
+
         self.get_logger().info(
             f"move - x: {self.current_x}, y: {self.current_y}, z: {self.current_z}"
         )
-        
+
         # Gọi lệnh di chuyển nếu cần (ở đây đang comment lại)
         self.delta.move_relative(
             X=self.current_x,
@@ -222,14 +226,15 @@ class Delta(Node):
             F=self.F,
             A=self.A,
             S=self.S,
-            E=self.E
+            E=self.E,
         )
 
     def move_to_call_back(self, msg):
         x = msg.x
         y = msg.y
         z = msg.z
-        self.move_delta(x=x, y=y, z=z)
+        self.get_logger().info(f"move - x: {x}, y: {y}, z: {z}")
+        # self.move_delta(x=x, y=y, z=z)
 
     def go_home_call_back(self, msg):
         self.delta.go_home()
@@ -252,8 +257,12 @@ class Delta(Node):
         status_msg.data = json.dumps(status)
         self.status_pub.publish(status_msg)
 
-    def map_joystick_to_range(self, joy_value, out_min, out_max, joy_min=1000, joy_max=2000):
-        value = out_min + ((joy_value - joy_min) / (joy_max - joy_min)) * (out_max - out_min)
+    def map_joystick_to_range(
+        self, joy_value, out_min, out_max, joy_min=1000, joy_max=2000
+    ):
+        value = out_min + ((joy_value - joy_min) / (joy_max - joy_min)) * (
+            out_max - out_min
+        )
         return round(value, 2)
 
     def handle_destroy(self):
@@ -261,6 +270,7 @@ class Delta(Node):
         # self.delta.close()
         self.destroy_node()
         self.get_logger().info("Delta Node Stopped")
+
 
 def main(args=None):
     app = QCoreApplication(sys.argv)
@@ -278,6 +288,7 @@ def main(args=None):
             node.handle_destroy()
         if rclpy.ok():
             rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

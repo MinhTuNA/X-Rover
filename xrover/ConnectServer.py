@@ -6,7 +6,6 @@ from cv_bridge import CvBridge
 import json
 import os
 import socketio
-import asyncio
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, Image, Imu
 from std_msgs.msg import Float32, String
@@ -24,7 +23,6 @@ class ConnectServer(Node):
         self.server_address = COMMON.server_address
         self.gps_data = None
         self.gps_heading = None
-        self.navigation_client = self.create_client(Trigger, "/rover/get/mode")
 
         # subscribers
         self.create_subscription(NavSatFix, "/gps/fix", self.gps_callback, 10)
@@ -33,18 +31,36 @@ class ConnectServer(Node):
         self.create_subscription(
             Image, "/camera/color/image_raw", self.image_callback, 10
         )
+        self.create_subscription(String, "/rover/mode", self.rover_mode_callback, 10)
+        
+        #status
+        self.create_subscription(String,"/gps/status/rate", self.gps_status_callback, 10)
+        
+        self.create_subscription(String, "/gps/ADRNAVA", self.adrnav_callback, 10)
+        self.create_subscription(String, "/gps/UNIHEADINGA", self.uniheading_callback, 10)
+        self.create_subscription(String, "/gps/RTKSTATUSA", self.rtkstatus_callback, 10)
+        self.create_subscription(String, "/gps/RTCMSTATUSA", self.rtcmstatus_callback, 10)
+        self.create_subscription(String, "/gps/BESTNAVXYZA", self.bestnav_callback, 10)
 
         # publishers
         self.publish_program_cmd = self.create_publisher(String, "/program_cmd", 10)
-        self.rover_vel_pub = self.create_publisher(Twist, "/rover/vel", 10)
+        self.rover_vel_pub = self.create_publisher(Twist, "/navigation/vel", 10)
         self.move_delta_pub = self.create_publisher(Point, "/delta/move", 10)
         self.delta_go_home_pub = self.create_publisher(String, "delta/go_home", 10)
         self.request_delta_status_pub = self.create_publisher(
             String, "delta/request_status", 10
         )
+        self.target_point_pub = self.create_publisher(NavSatFix, "/target_point", 10)
         self.start_pub = self.create_publisher(String, "/start", 10)
         self.stop_pub = self.create_publisher(String, "/stop", 10)
         self.mode_pub = self.create_publisher(String, "/mode", 10)
+        self.method_control_pub = self.create_publisher(String, "/method_control", 10)
+        self.start_logger_pub = self.create_publisher(String, "/logger/start", 10)
+        self.stop_logger_pub = self.create_publisher(String, "/logger/stop", 10)
+        self.freset_pub = self.create_publisher(String, "/gps/freset", 10)
+        self.set_rate_pub = self.create_publisher(String, "/gps/rate", 10)
+        self.save_config_pub = self.create_publisher(String, "/gps/save_config", 10)
+        self.request_rover_status_pub = self.create_publisher(String, "/rover/request_status", 10)
         # socketio
         self.sio = sio
         self.is_connected = False
@@ -56,9 +72,14 @@ class ConnectServer(Node):
             self.sio.on("move_rover", self.rover_vel, namespace="/rover")
             self.sio.on("start", self.start, namespace="/rover")
             self.sio.on("stop", self.stop, namespace="/rover")
+            self.sio.on("start_logging", self.start_logging, namespace="/rover")
+            self.sio.on("stop_logging", self.stop_logging, namespace="/rover")
             self.sio.on("delta_go_home", self.delta_go_home, namespace="/rover")
             self.sio.on("move_delta", self.move_delta, namespace="/rover")
             self.sio.on("disconnect", self.disconnect, namespace="/rover")
+            self.sio.on("freset", self.freset_callback, namespace="/rover")
+            self.sio.on("save_config", self.save_config_callback, namespace="/rover")
+            self.sio.on("set_rate", self.rate_callback, namespace="/rover")
             self.sio.on(
                 "request_delta_status", self.request_delta_status, namespace="/rover"
             )
@@ -66,9 +87,11 @@ class ConnectServer(Node):
                 "request_rover_status", self.request_rover_status, namespace="/rover"
             )
             self.sio.on("set_mode", self.set_mode, namespace="/rover")
+            self.sio.on("set_method_control", self.set_method_control, namespace="/rover")
+            self.sio.on("target_point", self.target_point, namespace="/rover")
 
     # socketio events
-
+    
     def on_connect(self):
         self.is_connected = True
         print("- Connected to server")
@@ -93,6 +116,7 @@ class ConnectServer(Node):
     def rover_vel(self, data):
         x = data["x"]
         z = data["z"]
+        # self.get_logger().info(f"x: {x}, z: {z}")
         self.publish_rover_vel(x, z)
 
     def start(self, data):
@@ -106,12 +130,46 @@ class ConnectServer(Node):
         signal.data = "stop"
         self.stop_pub.publish(signal)
         self.get_logger().info(f"stopped")
+    
+    def start_logging(self, data):
+        signal = String()
+        signal.data = str(data)
+        self.start_logger_pub.publish(signal)
+        # self.get_logger().info(f"started logger {data}")
+
+    def stop_logging(self, data):
+        signal = String()
+        signal.data = str(data)
+        self.stop_logger_pub.publish(signal)
+        # self.get_logger().info(f"stopped logger {data}")
 
     def set_mode(self, data):
         signal = String()
         signal.data = str(data)
         self.mode_pub.publish(signal)
-        self.get_logger().info(f"mode: {data}")
+        self.get_logger().info(f"set mode: {data}")
+    
+    def set_method_control(self, data):
+        signal = String()
+        signal.data = str(data)
+        self.method_control_pub.publish(signal)
+        self.get_logger().info(f"method control: {data}")
+    
+    def freset_callback(self, data):
+        signal = String()
+        self.freset_pub.publish(signal)
+        self.get_logger().info("freset")
+        
+    def save_config_callback(self, data):
+        signal = String()
+        self.save_config_pub.publish(signal)
+        self.get_logger().info("save config")
+        
+    def rate_callback(self, data):
+        signal = String()
+        signal.data = str(data)
+        self.set_rate_pub.publish(signal)
+        # self.get_logger().info(f"set rate: {data}")
 
     def move_delta(self, data):
         pos = Point()
@@ -128,39 +186,24 @@ class ConnectServer(Node):
 
     def request_delta_status(self, data):
         signal = String()
-        self.get_logger().info("requesting delta status")
+        # self.get_logger().info("requesting delta status")
         self.request_delta_status_pub.publish(signal)
 
     def request_rover_status(self, data):
-        self.get_logger().info("requesting rover status")
-        mode = self.get_mode()
+        # self.get_logger().info("requesting rover status")
+        signal = String()
+        self.request_rover_status_pub.publish(signal)
+    
+    def target_point(self, data):
+        latitude = data["latitude"]
+        longitude = data["longitude"]
+        target_point = NavSatFix()
+        target_point.latitude = latitude
+        target_point.longitude = longitude
+        self.get_logger().info(f"target point: {latitude}, {longitude}")
+        self.target_point_pub.publish(target_point)
 
-    def get_mode(self):
-        if not self.navigation_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().error("Service not available")
-            return
-
-        request = Trigger.Request()
-        future = self.navigation_client.call_async(request)
-        future.add_done_callback(self.response_callback)
-
-    def response_callback(self, future):
-        try:
-            response = future.result()
-        except Exception as e:
-            self.get_logger().error(f"Service call failed: {e}")
-            return
-
-        if response is not None:
-            mode = response.message
-            self.get_logger().info(f"rover status: {mode}")
-            rover_status = {"mode": int(mode)}
-            # Gửi kết quả về server thông qua SocketIO
-            self.sio.emit("rover_status", rover_status, namespace="/rover")
-        else:
-            self.get_logger().error("Failed to get response")
-
-    def disconnect():
+    def disconnect(self):
         print("Disconnected from server")
 
     #
@@ -176,6 +219,11 @@ class ConnectServer(Node):
             "altitude": msg.altitude,
         }
         self.send_gps_data()
+        
+    def gps_status_callback(self, msg):
+        rate = msg.data
+        self.send_to_server(name="gps_rate", data=rate)
+        # self.get_logger().info(f"gps rate: {rate}")
 
     def heading_callback(self, msg):
         self.gps_heading = msg.data
@@ -198,7 +246,7 @@ class ConnectServer(Node):
             self.sio.emit(
                 "IMU_data", {"acc": acc, "gyro": gyro, "quat": quat}, namespace="/rover"
             )
-            self.get_logger().info("Send IMU data to server")
+            # self.get_logger().info("Send IMU data to server")
 
     def image_callback(self, msg):
         try:
@@ -211,16 +259,50 @@ class ConnectServer(Node):
                 # self.get_logger().info("Send frame to server")
                 # print("Send frame to server")
             else:
-                self.get_logger().info("Not connected to server")
+                # self.get_logger().info("Not connected to server")
+                pass
         except Exception as e:
             self.get_logger().error(f"Error in image_callback: {e}")
 
-    #
-    #
+    def adrnav_callback(self, msg):
+        adrnav_data = json.loads(msg.data)
+        self.send_to_server(name="adrnav", data=adrnav_data)
+        # self.get_logger().info(f"ADRNAVA: {adrnav_data}")
+
+    def uniheading_callback(self, msg):
+        uniheading_data = json.loads(msg.data)
+        self.send_to_server(name="uniheading", data=uniheading_data)
+        # self.get_logger().info(f"UNIHEADINGA: {uniheading_data}")
+
+    def rtkstatus_callback(self, msg):
+        rtkstatus_data = json.loads(msg.data)
+        self.send_to_server(name="rtkstatus", data=rtkstatus_data)
+        # self.get_logger().info(f"RTKSTATUSA: {rtkstatus_data}")
+
+    def rtcmstatus_callback(self, msg):
+        rtcmstatus_data = json.loads(msg.data)
+        self.send_to_server(name="rtcmstatus", data=rtcmstatus_data)
+        # self.get_logger().info(f"RTCMSTATUSA: {rtcmstatus_data}")
+
+    def bestnav_callback(self, msg):
+        bestnav_data = json.loads(msg.data)
+        self.send_to_server(name="bestnav", data=bestnav_data)
+        # self.get_logger().info(f"BESTNAVXYZA: {bestnav_data}")
+
+    def rover_mode_callback(self, msg):
+        mode = msg.data
+        self.send_to_server(name="rover_mode", data=mode)
     #
     #
     # action functions
 
+    def send_to_server(self,name,data):
+        if sio.connected:
+            sio.emit(name, data, namespace="/rover")
+            # self.get_logger().info(f"Send to server: {name} {data}")
+        else:
+            self.get_logger().info("Not connected to server")
+    
     def send_gps_data(self):
         if self.gps_data is None or self.gps_heading is None:
             return
@@ -230,7 +312,8 @@ class ConnectServer(Node):
             "heading": self.gps_heading,
         }
         if sio.connected:
-            sio.emit("gps_data", location_data)
+            # self.get_logger().info(f"sending gps data to server")
+            sio.emit("gps_data", location_data,namespace="/rover")
             self.gps_data = None
             self.gps_heading = None
 
@@ -260,9 +343,9 @@ class ConnectServer(Node):
         twist.linear.x = float(x)
         twist.angular.z = float(z)
         self.rover_vel_pub.publish(twist)
-        self.get_logger().info(
-            f"linear.x={twist.linear.x}, angular.z={twist.angular.z}"
-        )
+        # self.get_logger().info(
+        #     f"linear.x={twist.linear.x}, angular.z={twist.angular.z}"
+        # )
         # print(f"linear.x={twist.linear.x}, angular.z={twist.angular.z}")
 
 
@@ -272,7 +355,8 @@ def main(args=None):
     node.connect_to_server()
     rclpy.spin(node)
     node.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

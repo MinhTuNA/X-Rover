@@ -10,8 +10,8 @@ def generate_launch_description():
             SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
                 package="xrover",
-                executable="tcp_client_node",
-                name="tcp_client", 
+                executable="rtcm_receiver_node",
+                name="rtcm_receiver", 
                 output="screen", 
                 parameters=[],
             ),

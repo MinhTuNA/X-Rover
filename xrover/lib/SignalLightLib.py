@@ -27,7 +27,7 @@ class SignalLightLib:
         GPIO.output(self.buzz, GPIO.LOW)
         print("low")
         time.sleep(1)
-    
+
     def _validate_value(self, value):
         if value not in [GPIO.HIGH, GPIO.LOW]:
             raise ValueError("Value must be GPIO.HIGH or GPIO.LOW")
@@ -35,11 +35,11 @@ class SignalLightLib:
     def set_red(self, value):
         self._validate_value(value)
         GPIO.output(self.red, value)
-        
+
     def set_yellow(self, value):
         self._validate_value(value)
         GPIO.output(self.yellow, value)
-        
+
     def set_green(self, value):
         self._validate_value(value)
         GPIO.output(self.green, value)
@@ -47,37 +47,20 @@ class SignalLightLib:
     def set_buzz(self, value):
         self._validate_value(value)
         GPIO.output(self.buzz, value)
-        
+
     def cleanup(self):
         self.set_red(0)
         self.set_yellow(0)
         self.set_green(0)
         self.set_buzz(0)
         GPIO.cleanup()
-        
 
 
 if __name__ == "__main__":
     signal_light_lib = SignalLightLib()
     try:
         while True:
-            signal_light_lib.set_red(GPIO.HIGH)
-            time.sleep(1)
-            signal_light_lib.set_red(GPIO.LOW)
-            time.sleep(1)
-            signal_light_lib.set_yellow(GPIO.HIGH)
-            time.sleep(1)
-            signal_light_lib.set_yellow(GPIO.LOW)
-            time.sleep(1)
-            signal_light_lib.set_green(GPIO.HIGH)
-            time.sleep(1)
-            signal_light_lib.set_green(GPIO.LOW)
-            time.sleep(1)
-            signal_light_lib.set_buzz(GPIO.HIGH)
-            time.sleep(1)
-            signal_light_lib.set_buzz(GPIO.LOW)
-            time.sleep(1)
-            
+            signal_light_lib.test_signal_light()
+
     except KeyboardInterrupt:
         signal_light_lib.cleanup()
-

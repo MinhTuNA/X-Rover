@@ -9,7 +9,42 @@ def generate_launch_description():
         [
             SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
+                package="xrover",  # Tên gói
+                executable="um982_node",  # Tên node
+                name="um982",
+                output="screen",  # Hiển thị đầu ra trên màn hình
+                parameters=[],
+            ),
+            Node(
                 package="xrover",
+                executable="connect_server_node",
+                name="connect_server", 
+                output="screen", 
+                parameters=[],
+            ),
+            Node(
+                package="xrover",
+                executable="rtcm_receiver_node",
+                name="rtcm_receiver",
+                output="screen",
+                parameters=[],
+            ),
+            Node(
+                package="xrover",
+                executable="fs_i6_node",
+                name="fs_i6",
+                output="screen",
+                parameters=[],
+            ),
+            Node(
+                package="xrover",
+                executable="motor_controller_node",
+                name="motor_controller",
+                output="screen",
+                parameters=[],
+            ),
+            Node(
+                package="xrover",  # Tên
                 executable="navigation_node",
                 name="navigation",
                 output="screen",
@@ -17,46 +52,18 @@ def generate_launch_description():
             ),
             Node(
                 package="xrover",
-                # Tên của console_script (được định nghĩa trong setup.py)
-                executable="connect_server_node",
-                name="connect_server",
+                executable="load_path_node",
+                name="load_path",
                 output="screen",
                 parameters=[],
             ),
             Node(
-                package="xrover",
-                executable="execute_program_node",
-                name="execute_program",
-                output="screen",
-                parameters=[],
-            ),
-            Node(
-                package='xrover',
-                executable='motor_controller_node',
-                name='motor_controller',
+                package='xrover', 
+                executable='path_logger_node',
+                name='path_logger',
                 output='screen',
-                parameters=[]
-            ),
-            Node(
-                package="xrover",
-                executable="um982_node",
-                name="um982",
-                output="screen",
                 parameters=[],
             ),
-            Node(
-                package="xrover",
-                executable="imu_node",
-                name="imu",
-                output="screen",
-                parameters=[],
-            ),
-            Node(
-                package="xrover",
-                executable="s21c_node",
-                name="s21c",
-                output="screen",
-                parameters=[],
-            ),
+           
         ]
     )

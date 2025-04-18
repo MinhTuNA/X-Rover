@@ -6,7 +6,7 @@ import time
 from PySide6.QtCore import QObject
 import serial.tools
 import serial.tools.list_ports
-from .ConstVariable import *
+from lib.ConstVariable import *
 import os
 import sys
 
@@ -46,16 +46,16 @@ class DevicePortScanner(QObject):
     def list_serial_ports(self):
 
         ports = serial.tools.list_ports.comports()
-        # for port in ports:
-        #     print(f"Port: {port.device}")
-        #     print(f"Description: {port.description}")
-        #     print(f"Manufacturer: {port.manufacturer}")
-        #     print(f"Product: {port.product}")
-        #     print(f"VID: {port.vid}")
-        #     print(f"PID: {port.pid}")
-        #     print(f"Serial Number: {port.serial_number}")
-        #     print(f"Interface: {port.interface}")
-        #     print("---")
+        for port in ports:
+            print(f"Port: {port.device}")
+            print(f"Description: {port.description}")
+            print(f"Manufacturer: {port.manufacturer}")
+            print(f"Product: {port.product}")
+            print(f"VID: {port.vid}")
+            print(f"PID: {port.pid}")
+            print(f"Serial Number: {port.serial_number}")
+            print(f"Interface: {port.interface}")
+            print("---")
         return ports
 
     def find_delta_x_port(self, ports):
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     ports = scanner.list_serial_ports()
     # print(f"rs485 >> {scanner.find_rs485_port()}")
     # print(f"imu >> {scanner.find_imu_port()}")
-    print(f"um982 >> {scanner.find_um982_port(ports)}")
+    # print(f"um982 >> {scanner.find_um982_port(ports)}")
     # print(f"s21c >> {scanner.find_s21c_port()}")
     # print(f"fs_i6 >> {scanner.find_fs_i6_port()}")
     # print("xencoder: ", scanner.find_encoder_x_port())

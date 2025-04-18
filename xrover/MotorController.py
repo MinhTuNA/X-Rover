@@ -24,6 +24,7 @@ class MotorController(Node):
         self.driver = Driver(self.rs485_port)
         self.linear_velocity = 0
         self.angular_velocity = 0
+        self.ratio = WHEEL.ratio
         self.kp = COMMON.motorKp
         self.ki = COMMON.motorKi
         self.kd = COMMON.motorKd
@@ -110,6 +111,7 @@ class MotorController(Node):
                 # self.get_logger().info(
                 #     f"left speed >> {0} RPM | right speed >> {0} RPM"
                 # )
+                
 
             elif self.linear_velocity != 0 or self.angular_velocity != 0:
                 omega_left, omega_right = self.wheel_speeds(
@@ -119,14 +121,14 @@ class MotorController(Node):
                 f_left, f_right = self.motor_speeds(
                     omega_left=omega_left, omega_right=omega_right
                 )
-                f_left = round(f_left, 4)
-                f_right = round(f_right, 4)
+                f_left = round(f_left, 4) * self.ratio
+                f_right = round(f_right, 4) * self.ratio*-1
                 # self.get_logger().info(f"f_left >> {f_left} | f_right >> {f_right}")
                 self.driver.set_motor(
                     left_rpm=int(f_left),
                     right_rpm=int(f_right),
-                    right_torque=600,
-                    left_torque=600,
+                    right_torque=1000,
+                    left_torque=1000,
                     left_mode=WHEEL.speed_mode,
                     right_mode=WHEEL.speed_mode,
                 )

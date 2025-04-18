@@ -34,10 +34,12 @@ setup(
             "s21c_node = xrover.S21C:main",
             "cmd_vel_node = xrover.test_cmd_vel:main",
             "delta_node = xrover.Delta:main",
-            "tcp_client_node = xrover.TCPClient:main",
+            "rtcm_receiver_node = xrover.RTCMReceiver:main",
             "program_reader_node = xrover.ProgramReader:main",
             "fs_i6_node = xrover.FS_I6:main",
             "signal_light_node = xrover.SignalLight:main",
+            "load_path_node = xrover.LoadPath:main",
+            "path_logger_node = xrover.PathLogger:main",
         ],
     },
 )

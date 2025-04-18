@@ -15,5 +15,19 @@ def generate_launch_description():
                 output="screen",  # Hiển thị đầu ra trên màn hình
                 parameters=[],
             ),
+            Node(
+                package="xrover",
+                executable="connect_server_node",
+                name="connect_server", 
+                output="screen", 
+                parameters=[],
+            ),
+            Node(
+                package="xrover",
+                executable="rtcm_receiver_node",
+                name="rtcm_receiver",
+                output="screen",
+                parameters=[],
+            ),
         ]
     )

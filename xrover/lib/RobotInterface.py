@@ -18,10 +18,23 @@ class RobotInterface(Device, QObject):
         self.confirm_msg = "YesDelta"
         self.request_msg = "IsDelta"
 
-        self.X, self.Y, self.Z, self.W, self.F, self.A, self.S, self.E, self.J = 0, 0, 0, 0, 500, 8000, 30, 40, 155000
+        self.X, self.Y, self.Z, self.W, self.F, self.A, self.S, self.E, self.J = (
+            0,
+            0,
+            0,
+            0,
+            500,
+            8000,
+            30,
+            40,
+            155000,
+        )
         self.old_X, self.old_Y, self.old_Z = self.X, self.Y, self.Z
         self.input_value = [0, 0, 0, 0, 0, 0]
-
+        self.x_max = 200
+        self.y_max = 200
+        self.x_min = -200
+        self.y_min = -200
         self.scurve_tool = Scurve_Interpolator()
         self.new_response = ""
 
@@ -35,7 +48,7 @@ class RobotInterface(Device, QObject):
         # print(response) Delta:EStop Pressing!
         self.new_response = str(response)
 
-        if self.last_command.count('Position') > 0:
+        if self.last_command.count("Position") > 0:
             self.__get_robot_position(response)
         elif self.new_response.startswith("I") or self.new_response.startswith("A"):
             self.__get_robot_input(response)
@@ -61,42 +74,52 @@ class RobotInterface(Device, QObject):
         if is_wait:
             self.wait_response()
 
-    def move_relative(self, X=None, Y=None, Z=None, W=None, F=None, A=None, S=None, E=None, J=None):
+    def move_relative(
+        self, X=None, Y=None, Z=None, W=None, F=None, A=None, S=None, E=None, J=None
+    ):
         self.old_X, self.old_Y, self.old_Z = self.X, self.Y, self.Z
         new_gcode = "G01"
 
         if X != None:
             self.X = self.X + X
-            new_gcode = new_gcode + ' X' + str(self.X)
+            if self.X >= self.x_max:
+                self.X = self.x_max
+            if self.X <= self.x_min:
+                self.X = self.x_min
+            new_gcode = new_gcode + " X" + str(self.X)
         if Y != None:
             self.Y = self.Y + Y
-            new_gcode = new_gcode + ' Y' + str(self.Y)
+            if self.Y >= self.y_max:
+                self.Y = self.y_max
+            if self.Y <= self.y_min:
+                self.Y = self.y_min
+            new_gcode = new_gcode + " Y" + str(self.Y)
         if Z != None:
             self.Z = self.Z + Z
-            new_gcode = new_gcode + ' Z' + str(self.Z)
+            new_gcode = new_gcode + " Z" + str(self.Z)
         if W != None:
             self.W = self.W + W
-            new_gcode = new_gcode + ' W' + str(self.W)
+            new_gcode = new_gcode + " W" + str(self.W)
         if F != None:
             self.F = F
             self.scurve_tool.max_vel = F
-            new_gcode = new_gcode + ' F' + str(F)
+            new_gcode = new_gcode + " F" + str(F)
         if A != None:
             self.A = A
             self.scurve_tool.max_acc = A
-            new_gcode = new_gcode + ' A' + str(A)
+            new_gcode = new_gcode + " A" + str(A)
         if S != None:
             self.S = S
             self.scurve_tool.vel_start = S
-            new_gcode = new_gcode + ' S' + str(E)
+            new_gcode = new_gcode + " S" + str(E)
         if E != None:
             self.E = E
             self.scurve_tool.vel_end = E
-            new_gcode = new_gcode + ' E' + str(E)
+            new_gcode = new_gcode + " E" + str(E)
         if J != None:
             self.J = J
             self.scurve_tool.max_jer = J
-            new_gcode = new_gcode + ' J' + str(J)
+            new_gcode = new_gcode + " J" + str(J)
 
         if self.is_feedback_position:
             self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
@@ -104,54 +127,75 @@ class RobotInterface(Device, QObject):
         self.send(new_gcode)
         self.wait_response()
 
-    def move(self, X=None, Y=None, Z=None, W=None, F=None, A=None, S=None, E=None, J=None, sync=False, time_offset=0):
+    def move(
+        self,
+        X=None,
+        Y=None,
+        Z=None,
+        W=None,
+        F=None,
+        A=None,
+        S=None,
+        E=None,
+        J=None,
+        sync=False,
+        time_offset=0,
+    ):
         self.old_X, self.old_Y, self.old_Z = self.X, self.Y, self.Z
         new_gcode = "G01"
 
         if X != None:
             self.X = X
-            new_gcode = new_gcode + ' X' + str(X)
+            new_gcode = new_gcode + " X" + str(X)
         if Y != None:
             self.Y = Y
-            new_gcode = new_gcode + ' Y' + str(Y)
+            new_gcode = new_gcode + " Y" + str(Y)
         if Z != None:
             self.Z = Z
-            new_gcode = new_gcode + ' Z' + str(Z)
+            new_gcode = new_gcode + " Z" + str(Z)
         if W != None:
             self.W = W
-            new_gcode = new_gcode + ' W' + str(W)
+            new_gcode = new_gcode + " W" + str(W)
         if F != None:
             self.F = F
             self.scurve_tool.max_vel = F
-            new_gcode = new_gcode + ' F' + str(F)
+            new_gcode = new_gcode + " F" + str(F)
         if A != None:
             self.A = A
             self.scurve_tool.max_acc = A
-            new_gcode = new_gcode + ' A' + str(A)
+            new_gcode = new_gcode + " A" + str(A)
         if S != None:
             self.S = S
             self.scurve_tool.vel_start = S
-            new_gcode = new_gcode + ' S' + str(E)
+            new_gcode = new_gcode + " S" + str(E)
         if E != None:
             self.E = E
             self.scurve_tool.vel_end = E
-            new_gcode = new_gcode + ' E' + str(E)
+            new_gcode = new_gcode + " E" + str(E)
         if J != None:
             self.J = J
             self.scurve_tool.max_jer = J
-            new_gcode = new_gcode + ' J' + str(J)
+            new_gcode = new_gcode + " J" + str(J)
 
         if sync == False:
             if self.is_feedback_position:
-                self.feedbackPositionSignal.emit(
-                    self.X, self.Y, self.Z, self.W)
+                self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
             print(new_gcode)
             self.send(new_gcode)
 
             self.wait_response()
         else:
             new_x, new_y = self.scurve_tool.find_sync_point(
-                self.old_X, self.old_Y, self.old_Z, self.X, self.Y, self.Z, self.rover_vel, self.con_angle, time_offset)
+                self.old_X,
+                self.old_Y,
+                self.old_Z,
+                self.X,
+                self.Y,
+                self.Z,
+                self.rover_vel,
+                self.con_angle,
+                time_offset,
+            )
             new_x = round(float(new_x), 2)
             new_y = round(float(new_y), 2)
             # print (f'new x {new_x}')
@@ -160,29 +204,27 @@ class RobotInterface(Device, QObject):
             self.X = new_x
             self.Y = new_y
 
-            new_gcode = 'G01 X{0} Y{1} Z{2} W{3}'.format(
-                new_x, new_y, self.Z, self.W)
+            new_gcode = "G01 X{0} Y{1} Z{2} W{3}".format(new_x, new_y, self.Z, self.W)
             if F != None:
-                new_gcode = new_gcode + ' F' + str(F)
+                new_gcode = new_gcode + " F" + str(F)
             if A != None:
-                new_gcode = new_gcode + ' A' + str(A)
+                new_gcode = new_gcode + " A" + str(A)
             if S != None:
-                new_gcode = new_gcode + ' S' + str(E)
+                new_gcode = new_gcode + " S" + str(E)
             if E != None:
-                new_gcode = new_gcode + ' E' + str(E)
+                new_gcode = new_gcode + " E" + str(E)
             if J != None:
-                new_gcode = new_gcode + ' J' + str(J)
+                new_gcode = new_gcode + " J" + str(J)
 
             if self.is_feedback_position:
-                self.feedbackPositionSignal.emit(
-                    self.X, self.Y, self.Z, self.W)
+                self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
 
             self.send(new_gcode)
             self.wait_response()
 
     def sleep(self, time_ms=1000, sync=False, is_wait=True):
         if sync == False:
-            self.send('G04 P{}'.format(time_ms))
+            self.send("G04 P{}".format(time_ms))
             if is_wait:
                 self.wait_response()
         else:
@@ -191,8 +233,12 @@ class RobotInterface(Device, QObject):
             new_x = self.X + distance * math.cos(math.radians(self.con_angle))
             new_y = self.Y + distance * math.sin(math.radians(self.con_angle))
             old_F = self.F
-            self.move(X=round(float(new_x), 2), Y=round(
-                float(new_y), 2), F=abs(self.rover_vel), sync=False)
+            self.move(
+                X=round(float(new_x), 2),
+                Y=round(float(new_y), 2),
+                F=abs(self.rover_vel),
+                sync=False,
+            )
             self.F = old_F
             self.scurve_tool.max_vel = self.F
 
@@ -207,9 +253,9 @@ class RobotInterface(Device, QObject):
     def set_output(self, pin, state, is_wait=True):
         gcode = ""
         if state != 0:
-            gcode = 'M03 D{0}'.format(pin)
+            gcode = "M03 D{0}".format(pin)
         else:
-            gcode = 'M05 D{0}'.format(pin)
+            gcode = "M05 D{0}".format(pin)
 
         self.send(gcode)
         if is_wait:
@@ -245,9 +291,9 @@ class RobotInterface(Device, QObject):
     def read_input(self, pin, is_wait=True):
         gcode = ""
         if pin > 3:
-            gcode = 'M07 A{0}'.format(pin - 4)
+            gcode = "M07 A{0}".format(pin - 4)
         else:
-            gcode = 'M07 I{0}'.format(pin)
+            gcode = "M07 I{0}".format(pin)
 
         self.send(gcode)
         if is_wait:
@@ -270,8 +316,8 @@ class RobotInterface(Device, QObject):
         self.con_angle = float(con_angle)
 
     def __get_robot_position(self, response):
-        if response.count(',') > 2:
-            paras = response.split(',')
+        if response.count(",") > 2:
+            paras = response.split(",")
             for i in range(len(paras)):
                 if i == 0:
                     self.X = float(paras[i])
@@ -286,14 +332,15 @@ class RobotInterface(Device, QObject):
                 if i == 5:
                     self.V = float(paras[i])
         self.feedbackPositionSignal.emit(self.X, self.Y, self.Z, self.W)
+
     # ex response: "I1 V0" or "A1 V2400"
     # nếu
     def __get_robot_input(self, response):
-        _key_value = response.split(' ')
+        _key_value = response.split(" ")
         _index = int(_key_value[0][1])
         _value = int(_key_value[1][1:])
 
-        if _key_value[0][0] == 'A':
+        if _key_value[0][0] == "A":
             _index = _index + 4
 
         self.input_value[_index] = _value
