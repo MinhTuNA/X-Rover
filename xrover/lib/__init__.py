@@ -1,1 +1,0 @@
-from .SerialDeviceScanner import DevicePortScanner

@@ -15,5 +15,13 @@ def generate_launch_description():
                 output="screen",  # Hiển thị đầu ra trên màn hình
                 parameters=[],
             ),
+            Node(
+                package="xrover",
+                executable="fs_i6_node",
+                name="fs_i6_node", 
+                output="screen",
+                parameters=[],
+            )
+
         ]
     )

@@ -90,14 +90,12 @@ class YesenseDecoder:
 
         return "ANALYSIS_OK"
 
-    def read_from_uart(self, port: str, baudrate: int, timeout: float = 1.0):
+    def read_from_uart(self, ser:serial.Serial):
         try:
-            with serial.Serial(port, baudrate, timeout=timeout) as ser:
-                ser.flushInput()
-                last_time = time.time()
-                consecutive_errors = 0
-                while True:
-                    data = ser.read(UART_RX_BUF_LEN)
+            last_time = time.time()
+            consecutive_errors = 0
+            while True:
+                    data = ser.read_all()
                     if data:
                         result = {}
                         ret = self.data_proc(data, result)
@@ -140,33 +138,6 @@ class YesenseDecoder:
 
         except serial.SerialException as e:
             print(f"UART Error: {e}")
-
-    def read_from_uart_(self, ser, uart_rx_buf_len):
-        try:
-            data = ser.read(uart_rx_buf_len)
-            if data:
-                result = {}
-                ret = self.data_proc(data, result)
-                if ret == "ANALYSIS_OK":
-                    self.msg_count += 1
-                    tid = result.get("tid")
-                    acc = result.get("acc")
-                    gyro = result.get("gyro")
-                    euler = result.get("euler")
-                    quat = result.get("quat")
-                    return {
-                        "tid": tid,
-                        "acc": acc,
-                        "gyro": gyro,
-                        "euler": euler,
-                        "quat": quat,
-                    }
-                elif ret == "BUF_FULL":
-                    return "BUF_FULL"
-                elif ret != "NO_HEADER":
-                    return f"Decoding Error: {ret}"
-        except serial.SerialException as e:
-            return f"UART Error: {e}"
 
 
 class StdOutDecoder:
@@ -300,61 +271,17 @@ class StdOutDecoder:
 
 def main():
     imu = YesenseDecoder()  # Replace with your actual class
-    port = "/dev/ttyACM0"
+    port = "/dev/ttyACM2"
     baudrate = 460800
     timeout = 1.0
-    consecutive_errors = 0
-    last_time = time.time()
 
     try:
         with serial.Serial(port, baudrate, timeout=timeout) as ser:
-            ser.flushInput()
-            while True:
-                data = imu.read_from_uart_(ser, 1024)
-                if isinstance(data, dict):
-                    tid = data.get("tid")
-                    acc = data.get("acc")
-                    gyro = data.get("gyro")
-                    euler = data.get("euler")
-                    quat = data.get("quat")
-                    print(
-                        f"\ntid >> {tid}"
-                        f"\nacc >> {acc}"
-                        f"\ngyro >> {gyro}"
-                        f"\neuler >> {euler}"
-                        f"\nquat >> {quat}"
-                    )
-                    consecutive_errors = 0
-                    # Process data as needed
-                elif data == "BUF_FULL":
-                    consecutive_errors += 1
-                    if consecutive_errors >= 3:
-                        print("Too many buffer full errors")
-                        consecutive_errors = 0
-                        # pass
-                        break
-                        # pass
-                elif "Error" in data:
-                    print(data)
-                    # pass
-                    # break
-
-                current_time = time.time()
-                elapsed_time = (current_time - last_time) * 1000
-                imu.timing_count += elapsed_time
-
-                if imu.timing_count >= CNT_PER_SECOND:
-                    imu.msg_rate = imu.msg_count
-                    imu.msg_count = 0
-                    imu.timing_count = 0
-                    print(f"Message Rate: {imu.msg_rate} msgs/sec")
-
-                last_time = current_time
+            ser.reset_input_buffer()
+            imu.read_from_uart(ser)
     except serial.SerialException as e:
         print(f"UART Error: {e}")
 
 
 if __name__ == "__main__":
     main()
-decoder = YesenseDecoder()
-decoder.read_from_uart("COM10", 460800)

@@ -36,7 +36,7 @@ class GPS:
     serial_number = "DU0D6VH3"
 
 class RF_MODULE:
-    baudrate = 115200
+    baudrate = 57600
     serial_number = "DU0D66DB"
 
 
@@ -68,3 +68,4 @@ class WHEEL:
     address_start = 0x00
     num_byte = 0x0009
     ratio = 5
+    torque = 255

@@ -4,15 +4,15 @@ import time
 
 class SignalLightLib:
     def __init__(self):
-        self.red = 32
-        self.yellow = 31
-        self.green = 29
-        self.buzz = 33
+        self.red = 33
+        self.yellow = 29
+        self.green = 31
+        self.buzz = 32
         GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(self.red, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.yellow, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.green, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.buzz, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(self.red, GPIO.OUT, initial=GPIO.HIGH)
+        GPIO.setup(self.yellow, GPIO.OUT, initial=GPIO.HIGH)
+        GPIO.setup(self.green, GPIO.OUT, initial=GPIO.HIGH)
+        GPIO.setup(self.buzz, GPIO.OUT, initial=GPIO.HIGH)
 
     def test_signal_light(self):
         GPIO.output(self.red, GPIO.HIGH)
@@ -60,7 +60,19 @@ if __name__ == "__main__":
     signal_light_lib = SignalLightLib()
     try:
         while True:
-            signal_light_lib.test_signal_light()
-
+            signal_light_lib.set_red(GPIO.HIGH)
+            time.sleep(1)
+            signal_light_lib.set_red(GPIO.LOW)
+            time.sleep(1)
+            signal_light_lib.set_yellow(GPIO.HIGH)
+            time.sleep(1)
+            signal_light_lib.set_yellow(GPIO.LOW)
+            time.sleep(1)
+            signal_light_lib.set_green(GPIO.HIGH)
+            time.sleep(1)
+            signal_light_lib.set_green(GPIO.LOW)
+            time.sleep(1)
+            
+            
     except KeyboardInterrupt:
         signal_light_lib.cleanup()

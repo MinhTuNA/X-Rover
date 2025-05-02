@@ -1,27 +1,23 @@
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import Range
-from .lib.SerialDeviceScanner import DevicePortScanner
-from .lib.ConstVariable import ULTRASONIC
+from lib.ConstVariable import ULTRASONIC
+from PySide6.QtCore import QObject, Signal
 import serial
-import os
+import time
 
-
-class DistanceSensorsNode(Node):
-    def __init__(self):
-        super().__init__("s21c_sensors_node")
+class UltrasonicSensors(QObject):
+    a_signal = Signal(int)
+    b_signal = Signal(int)
+    c_signal = Signal(int)
+    d_signal = Signal(int)
+    e_signal = Signal(int)
+    f_signal = Signal(int)
+    
+    def __init__(self,port = None):
+        super().__init__()
         self.s21c_baudrate = None
         self.s21c_min_range = None
         self.s21c_max_range = None
         self.load_setting()
-        self.a_publisher = self.create_publisher(Range, "/sensor/A", 10)
-        self.b_publisher = self.create_publisher(Range, "/sensor/B", 10)
-        self.c_publisher = self.create_publisher(Range, "/sensor/C", 10)
-        self.d_publisher = self.create_publisher(Range, "/sensor/D", 10)
-        self.e_publisher = self.create_publisher(Range, "/sensor/E", 10)
-        self.f_publisher = self.create_publisher(Range, "/sensor/F", 10)
-        self.device = DevicePortScanner()
-        self.s21c_port = self.device.find_s21c_port()
+        self.s21c_port = port
         self.s21c_field_of_view = 1.047
         self.timeout = 1
         self.sensor_data_index = 0
@@ -29,12 +25,10 @@ class DistanceSensorsNode(Node):
             self.serial_port = serial.Serial(
                 port=self.s21c_port, baudrate=self.s21c_baudrate, timeout=self.timeout
             )
-            self.get_logger().info(f"Connected to UART port: {self.s21c_port}")
+            print(f"UltrasonicSensors: >> Connected to ultrasonic sensors: {self.s21c_port}")
         except serial.SerialException as e:
-            self.get_logger().error(f"Error opening UART port: {e}")
+            print(f"UltrasonicSensors: >> Error opening ultrasonic sensors: {e}")
             raise e
-
-        self.read_uart_data()
 
     def load_setting(self):
         self.s21c_baudrate = ULTRASONIC.baudrate
@@ -45,15 +39,18 @@ class DistanceSensorsNode(Node):
         try:
             while True:
                 if self.serial_port.in_waiting > 0:
-                    data = self.serial_port.readline().decode("utf-8").strip()
-                    sensor_data = self.parse_sensor_data(data)
-                    self.publish_sensor_data(sensor_data)
-                    self.get_logger().info(str(self.parse_sensor_data(data)))
-                    # self.get_logger().info(f'{data}')
+                    try:
+                        data = self.serial_port.read_all().decode("utf-8",errors="ignore").strip()
+                        sensor_data = self.parse_sensor_data(data)
+                        self.publish_sensor_data(sensor_data)
+                        # print(f"S21C: >> {str(self.parse_sensor_data(data))}")
+                    except Exception as e:
+                        print(f"S21C: >> Error reading from UART: {e}")
+                time.sleep(0.1)
         except Exception as e:
-            self.get_logger().error(f"Error reading from UART: {e}")
+            print(f"S21C: >> Error reading from UART: {e}")
 
-    def parse_sensor_data(self, data):
+    def parse_sensor_data(self, data:str):
         lines = data.splitlines()
 
         parsed_data = {}
@@ -68,42 +65,19 @@ class DistanceSensorsNode(Node):
 
     def publish_sensor_data(self, data):
         if "A" in data:
-            self.publish_range(self.a_publisher, "A", data["A"])
+            self.a_signal.emit(data["A"])
         if "B" in data:
-            self.publish_range(self.b_publisher, "B", data["B"])
+            self.b_signal.emit(data["B"])
         if "C" in data:
-            self.publish_range(self.c_publisher, "C", data["C"])
+            self.c_signal.emit(data["C"])
         if "D" in data:
-            self.publish_range(self.d_publisher, "D", data["D"])
+            self.d_signal.emit(data["D"])
         if "E" in data:
-            self.publish_range(self.e_publisher, "E", data["E"])
+            self.e_signal.emit(data["E"])
         if "F" in data:
-            self.publish_range(self.f_publisher, "F", data["F"])
+            self.f_signal.emit(data["F"])
+        
+    def clean_up(self):
+        self.serial_port.close()
+        print(f"UltrasonicSensors: >> Closed ultrasonic sensors: {self.s21c_port}")
 
-    def publish_range(self, publisher, frame_id, distance):
-        if distance <= 0:
-            return
-        msg = Range()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = frame_id
-        msg.radiation_type = Range.ULTRASOUND
-        msg.field_of_view = self.s21c_field_of_view
-        msg.min_range = float(self.s21c_min_range)
-        msg.max_range = float(self.s21c_max_range)
-        msg.range = distance / 1000.0
-        publisher.publish(msg)
-        # if frame_id == "E":
-        #     self.get_logger().info(f"Published {frame_id}: {msg.range:.3f} m")
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    node = DistanceSensorsNode()
-    rclpy.spin(node)
-
-    node.destroy_node()
-    rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()

@@ -1,7 +1,108 @@
 import math
+from PySide6.QtCore import QObject, QTimer
+from PySide6.QtWidgets import QApplication
+from .SerialDeviceScanner import DevicePortScanner
+from .ModbusDevice import Driver
+from .ConstVariable import COMMON, WHEEL
+import os
+import sys
+import signal
 
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-class NavigationController:
+class NavigationController(QObject):
+
+    def __init__(self,port = None):
+        super().__init__()
+        self.scanner = DevicePortScanner()
+        self.rs485_port = port
+        self.driver = Driver(self.rs485_port)
+        self.linear_velocity = 0
+        self.angular_velocity = 0
+        self.ratio = WHEEL.ratio
+        self.kp = COMMON.motorKp
+        self.ki = COMMON.motorKi
+        self.kd = COMMON.motorKd
+        self.wheel_radius = COMMON.wheel_radius
+        self.wheel_base = COMMON.wheel_base
+        self.mode = WHEEL.speed_mode
+
+    def wheel_speeds(self, linear_velocity, angular_velocity):
+        omega_left = (
+            linear_velocity + (angular_velocity * self.wheel_base / 2)
+        ) / self.wheel_radius
+        omega_right = (
+            linear_velocity - (angular_velocity * self.wheel_base / 2)
+        ) / self.wheel_radius
+        return omega_left, omega_right
+
+    "RPM"
+
+    def motor_speeds(self, omega_left, omega_right):
+        f_left = (omega_left / (2 * math.pi)) * 60
+        f_right = (omega_right / (2 * math.pi)) * 60
+        return f_left, f_right
+    
+    def set_rpm(self, left_rpm=None, right_rpm=None):
+        if left_rpm is None or right_rpm is None:
+            return
+        left_rpm = left_rpm*self.ratio
+        right_rpm = right_rpm*self.ratio*-1
+        # print(f"Navigation [DRIVER]: >> left_rpm: {int(left_rpm)} | right_rpm: {int(right_rpm)}")
+        self.driver.set_motor(
+            left_rpm=int(left_rpm),
+            right_rpm=int(right_rpm),
+            left_torque=WHEEL.torque,
+            right_torque=WHEEL.torque,
+            left_mode=WHEEL.speed_mode,
+            right_mode=WHEEL.speed_mode,
+        )
+    
+    def set_velocity(self, linear_velocity=None, angular_velocity=None):
+        if linear_velocity is None or angular_velocity is None:
+            return
+        self.linear_velocity = linear_velocity
+        self.angular_velocity = angular_velocity
+        if self.mode == WHEEL.speed_mode:
+            if self.linear_velocity == 0 and self.angular_velocity == 0:
+                self.driver.set_motor(
+                    left_rpm=0,
+                    right_rpm=0,
+                    left_torque=150,
+                    right_torque=150,
+                    right_mode=WHEEL.speed_mode,
+                    left_mode=WHEEL.speed_mode,
+                )
+                # print(f"Navigation [DRIVER]: >> left_rpm: {0} | right_rpm: {0}")
+                
+
+            elif self.linear_velocity != 0 or self.angular_velocity != 0:
+                omega_left, omega_right = self.wheel_speeds(
+                    linear_velocity=self.linear_velocity,
+                    angular_velocity=self.angular_velocity,
+                )
+                f_left, f_right = self.motor_speeds(
+                    omega_left=omega_left, omega_right=omega_right
+                )
+                f_left = round(f_left, 4) * self.ratio
+                f_right = round(f_right, 4) * self.ratio*-1
+                print(f"Navigation [DRIVER]: >> left_rpm: {int(f_left)} | right_rpm: {int(f_right)}")
+                self.driver.set_motor(
+                    left_rpm=int(f_left),
+                    right_rpm=int(f_right),
+                    right_torque=WHEEL.torque,
+                    left_torque=WHEEL.torque,
+                    left_mode=WHEEL.speed_mode,
+                    right_mode=WHEEL.speed_mode,
+                )
+            else:
+                print("Navigation [DRIVER]: >> invalid velocity")
+        elif self.mode == WHEEL.torque_mode:
+            pass
+    
+    def clean_up(self):
+        self.driver.clean_up()
+        
 
     @staticmethod
     def compute_twist_stanley(
@@ -52,7 +153,7 @@ class NavigationController:
         
         dist_to_target = math.hypot(target_x - current_x, target_y - current_y)
         
-        if lambda_val >= 1 or dist_to_target < 0.02:
+        if lambda_val >= 1 or dist_to_target < 0.15:
             linear_x = 0.0
             angular_z = 0.0
             return linear_x, angular_z
@@ -184,3 +285,18 @@ class NavigationController:
         ) * math.cos(dLon)
         bearing = math.atan2(x, y)
         return (math.degrees(bearing) + 180) % 360 - 180
+    
+def main():
+    app = QApplication(sys.argv)
+    nav = NavigationController()
+    nav.set_velocity(linear_velocity=0.5, angular_velocity=0)
+    def handle_destroy(signum, frame):
+        print("Navigation: >> Closing...")
+        nav.clean_up()
+        app.quit()
+
+    signal.signal(signal.SIGINT, handle_destroy)
+    app.exec()
+    
+if __name__ == "__main__":
+    main()

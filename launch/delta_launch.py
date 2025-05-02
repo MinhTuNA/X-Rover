@@ -14,19 +14,26 @@ def generate_launch_description():
                 output="screen",
                 parameters=[],
             ),
-            Node(
-                package="xrover",
-                executable="fs_i6_node",
-                name="fs_i6",
-                output="screen",
-                parameters=[],
-            ),
-            Node(
-                package="xrover",
-                executable="signal_light_node",
-                name="signal_light",
-                output="screen",
-                parameters=[],
-            ),
+            # Node(
+            #     package="xrover",
+            #     executable="connect_server_node",
+            #     name="connect_server", 
+            #     output="screen", 
+            #     parameters=[],
+            # ),
+            # Node(
+            #     package="xrover",
+            #     executable="fs_i6_node",
+            #     name="fs_i6",
+            #     output="screen",
+            #     parameters=[],
+            # ),
+            # Node(
+            #     package="xrover",
+            #     executable="signal_light_node",
+            #     name="signal_light",
+            #     output="screen",
+            #     parameters=[],
+            # ),
         ]
     )

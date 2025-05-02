@@ -12,6 +12,7 @@ class GPSDevice:
         self.BESTNAVXYZA_CMD = "BESTNAVXYZA"
         self.FRESET_CMD = "FRESET"
         self.SAVECONFIG_CMD = "SAVECONFIG"
+        self.RTCM_CMD = "ONCHANGED"
         
         self.valid_keywords = [
             "#ADRNAVA",

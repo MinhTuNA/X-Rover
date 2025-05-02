@@ -137,7 +137,7 @@ if __name__ == "__main__":
     ports = scanner.list_serial_ports()
     # print(f"rs485 >> {scanner.find_rs485_port()}")
     # print(f"imu >> {scanner.find_imu_port()}")
-    # print(f"um982 >> {scanner.find_um982_port(ports)}")
+    print(f"um982 >> {scanner.find_um982_port(ports)}")
     # print(f"s21c >> {scanner.find_s21c_port()}")
     # print(f"fs_i6 >> {scanner.find_fs_i6_port()}")
     # print("xencoder: ", scanner.find_encoder_x_port())

@@ -52,7 +52,7 @@ class ModbusDevice:
                     crc >>= 1
         return crc & 0xFF, (crc >> 8) & 0xFF
 
-    def cleanup(self):
+    def clean_up(self):
         self.rs485.close()
 
 

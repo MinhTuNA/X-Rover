@@ -9,10 +9,17 @@ def generate_launch_description():
         [
             SetEnvironmentVariable("ROS_DOMAIN_ID", "0"),
             Node(
-                package="xrover",  # Tên gói
-                executable="um982_node",  # Tên node
+                package="xrover", 
+                executable="um982_node",  
                 name="um982",
-                output="screen",  # Hiển thị đầu ra trên màn hình
+                output="screen", 
+                parameters=[],
+            ),
+            Node(
+                package="xrover",
+                executable="delta_node",
+                name="delta",
+                output="screen",
                 parameters=[],
             ),
             Node(
@@ -38,13 +45,6 @@ def generate_launch_description():
             ),
             Node(
                 package="xrover",
-                executable="motor_controller_node",
-                name="motor_controller",
-                output="screen",
-                parameters=[],
-            ),
-            Node(
-                package="xrover",  # Tên
                 executable="navigation_node",
                 name="navigation",
                 output="screen",
@@ -61,6 +61,20 @@ def generate_launch_description():
                 package='xrover', 
                 executable='path_logger_node',
                 name='path_logger',
+                output='screen',
+                parameters=[],
+            ),
+            Node(
+                package='xrover', 
+                executable='signal_light_node',
+                name='signal_light',
+                output='screen',
+                parameters=[],
+            ),
+            Node(
+                package='xrover',
+                executable='s21c_node',
+                name='s21c',
                 output='screen',
                 parameters=[],
             ),

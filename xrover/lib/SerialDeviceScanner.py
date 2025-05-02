@@ -1,14 +1,8 @@
-import sys
-import glob
 import serial
-import cv2
-import time
 from PySide6.QtCore import QObject
 import serial.tools
 import serial.tools.list_ports
 from .ConstVariable import *
-import os
-import sys
 
 
 class DevicePortScanner(QObject):

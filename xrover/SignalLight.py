@@ -1,62 +1,68 @@
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import Int32
-from .lib.SignalLightLib import SignalLightLib
+from lib.SignalLightLib import SignalLightLib
+from PySide6.QtCore import QObject, QTimer
+import sys
+from PySide6.QtWidgets import QApplication
+import signal
+import os
 
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-class SignalLight(Node):
+class SignalLight(QObject):
     def __init__(self):
-        super().__init__("signal_light")
+        super().__init__()
+        self.on = 0
+        self.off = 1
         self.signal_light_lib = SignalLightLib()
-        self.signal_light_lib.set_red(0)
-        self.signal_light_lib.set_yellow(0)
-        self.signal_light_lib.set_green(0)
-        self.signal_light_lib.set_buzz(0)
-        self.sub_red = self.create_subscription(
-            Int32, "signal_light/red", self.red_callback, 10
-        )
-        self.sub_yellow = self.create_subscription(
-            Int32, "signal_light/yellow", self.yellow_callback, 10
-        )
-        self.sub_green = self.create_subscription(
-            Int32, "signal_light/green", self.green_callback, 10
-        )
-        self.sub_buzz = self.create_subscription(
-            Int32, "signal_light/buzz", self.buzz_callback, 10
-        )
+        self.signal_light_lib.set_red(self.off)
+        self.signal_light_lib.set_yellow(self.off)
+        self.signal_light_lib.set_green(self.off)
+        self.signal_light_lib.set_buzz(self.off)
+        
+    def red(self, state: bool):
+        if state:
+            self.signal_light_lib.set_red(self.on)
+        else:
+            self.signal_light_lib.set_red(self.off)
 
-    def red_callback(self, msg):
-        value = int(msg.data)
-        self.signal_light_lib.set_red(value)
+    def yellow(self, state: bool):
+        if state:
+            self.signal_light_lib.set_yellow(self.on)
+        else:
+            self.signal_light_lib.set_yellow(self.off)
 
-    def yellow_callback(self, msg):
-        value = int(msg.data)
-        self.signal_light_lib.set_yellow(value)
+    def green(self, state: bool):
+        if state:
+            self.signal_light_lib.set_green(self.on)
+        else:
+            self.signal_light_lib.set_green(self.off)
 
-    def green_callback(self, msg):
-        value = int(msg.data)
-        self.signal_light_lib.set_green(value)
+    def buzz(self, state: bool):
+        if state:
+            self.signal_light_lib.set_buzz(self.on)
+        else:
+            self.signal_light_lib.set_buzz(self.off)
 
-    def buzz_callback(self, msg):
-        value = int(msg.data)
-        self.signal_light_lib.set_buzz(value)
-
-    def handle_destroy(self):
+    def clean_up(self):
         self.signal_light_lib.cleanup()
-        self.destroy_node()
 
 
-def main(args=None):
-    rclpy.init(args=args)
+def main():
+    app = QApplication(sys.argv)
     signal_light = SignalLight()
-    try:
-        rclpy.spin(signal_light)
-    except KeyboardInterrupt:
-        signal_light.get_logger().info("Keyboard interrupt, shutting down...")
-    finally:
-        signal_light.handle_destroy()
-        if rclpy.ok():
-            rclpy.shutdown()
+    signal_light.red(True)
+    signal_light.yellow(True)
+    signal_light.green(True)
+    signal_light.buzz(True)
+    
+    timer = QTimer()
+    timer.start(100)  # mỗi 100ms
+    timer.timeout.connect(lambda: None)
+
+    def handle_sigint(sig, frame):
+        signal_light.clean_up()
+        app.quit()
+    signal.signal(signal.SIGINT, handle_sigint)
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

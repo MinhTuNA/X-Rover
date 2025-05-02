@@ -1,238 +1,207 @@
 #!/usr/bin/env python3
-import json
-import rclpy
-import os
+from lib.ConstVariable import COMMON
+from lib.NavigationController import NavigationController
+from VariableManager import instance
+from lib.ControlLib import ControlLib
+from PySide6.QtCore import QObject, Signal, QTimer
 from enum import Enum
-from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix, Imu
-from std_msgs.msg import Float32, String, Int32
-from geometry_msgs.msg import Twist
-from std_srvs.srv import Trigger
-from .lib.ConstVariable import COMMON
-from .lib.NavigationController import NavigationController
-from .VariableManager import instance
-from .lib.ControlLib import ControlLib
+
+class Control(Enum):
+    FS_I6 = 0
+    FREE = 1
 
 class Mode(Enum):
     GPS = 0
     CAMERA = 1
-    CONTROL = 2
+    VELOCITY = 2
 
-class MethodControl(Enum):
-    WEB = 0
-    FS_I6 = 1
+class Navigation(QObject):
+    is_rover_connected_signal = Signal(bool)
+    rover_mode_signal = Signal(int)
+    method_control_signal = Signal(int)
+    def __init__(self,port = None):
+        super().__init__()
 
-class ControlMode(Enum):
-    ROVER = 1000
-    DELTA = 2000
-
-
-class Navigation(Node):
-    def __init__(self):
-        super().__init__("navigation_node")
+        #-----------gps-----------
         self.start_lat = None
         self.start_lon = None
         self.goal_lat = None
         self.goal_lon = None
         self.current_lat = None
         self.current_lon = None
+        self.current_alt = None
         self.current_heading = None
+
+        #-----------control-----------
+        self.mode = None
+        self.control = Control.FREE
         self.is_running = False
         self.is_segment_done = False
-        self.mode = None
         self.control_x = 0
         self.control_z = 0
+        self.left_rpm = 0
+        self.right_rpm = 0
         self.current_swa = None
-        self.method_control = None
-        self.control_mode = None
         self.linear_vel_x = COMMON.rover_speed
         self.control_lib = ControlLib()
-        self.navigation_controller = NavigationController()
+        self.navigation_controller = NavigationController(port)
         instance.load(COMMON.variable_path)
         self.load_variable()
-        self.get_logger().info("navigation node initialized")
-        self.cmd_vel_pub = self.create_publisher(Twist, "/rover/vel", 10)
-        self.rover_status_pub = self.create_publisher(String, "/rover/move_status", 10)
-        self.rover_mode_pub = self.create_publisher(String, "/rover/mode", 10)
-        self.create_subscription(String, "/path/segment", self.segment_callback, 10)
-        self.create_subscription(NavSatFix, "/gps/fix", self.gps_callback, 10)
-        self.create_subscription(Float32, "/gps/heading", self.heading_callback, 10)
-        self.create_subscription(String, "/start", self.start_callback, 10)
-        self.create_subscription(String, "/stop", self.stop_callback, 10)
-        self.create_subscription(String, "/mode", self.mode_callback, 10)
-        self.create_subscription(Int32, "fs_i6/ch1", self.control_x_callback, 10)
-        self.create_subscription(Int32, "fs_i6/ch0", self.control_z_callback, 10)
-        self.create_subscription(Int32, "fs_i6/swd", self.control_mode_callback, 10)
-        self.create_subscription(Twist, "/navigation/vel", self.vel_callback, 10)
-        self.create_subscription(String, "/method_control", self.method_control_callback, 10)
-        self.create_subscription(String, "/rover/request_status", self.request_status_callback, 10)
-        self.timer = self.create_timer(0.05, self.navigate)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.navigate)
 
+    def run(self):
+        self.timer.start(50)
+    
     def load_variable(self):
         mode = instance.get("mode")
         self.mode = Mode(int(mode))
-        self.get_logger().info(f"mode: {self.mode}")
-        method_control = instance.get("method_control")
-        self.method_control = MethodControl(int(method_control))
-        self.get_logger().info(f"method_control: {self.method_control}")
+        print(f"Navigation: >> mode: {self.mode}")
 
-    def segment_callback(self, msg):
-        segment = json.loads(msg.data)
+    def segment_callback(self, segment: dict):
         self.start_lat = segment["start_lat"]
         self.start_lon = segment["start_lon"]
         self.goal_lat = segment["end_lat"]
         self.goal_lon = segment["end_lon"]
+    
+    def target_point_callback(self, latitude:str, longitude:str):
+        self.goal_lat = float(latitude)
+        self.goal_lon = float(longitude)
+        # print(f"target point: {latitude}, {longitude}")
 
-    def gps_callback(self, msg):
-        self.current_lat = msg.latitude
-        self.current_lon = msg.longitude
+    def gps_callback(self, latitude:str, longitude:str, altitude:str):
+        self.current_lat = float(latitude)
+        self.current_lon = float(longitude)
+        self.current_alt = float(altitude)
+        # print(f"gps: {latitude}, {longitude}, {altitude}")
 
-    def heading_callback(self, msg):
-        self.current_heading = msg.data
-
-    def start_callback(self, msg):
+    def heading_callback(self, heading: float):
+        self.current_heading = heading
+        # print(f"heading: {heading}")
+        
+    def start_navigation(self):
         self.is_running = True
         self.is_segment_done = False
 
-    def stop_callback(self, msg):
+    def stop_navigation(self):
         self.is_running = False
 
-    def mode_callback(self, msg):
-        self.mode = Mode(int(msg.data))
-        instance.set("mode", int(msg.data))
+    def set_mode(self, mode: int):
+        self.mode = Mode(mode)
+        instance.set("mode", mode)
         instance.save()
-        self.get_logger().info(f"set mode: {self.mode}")
+        print(f"Navigation: >> set mode: {self.mode}")
     
-    def request_status_callback(self, msg):
-        status_msg = String()
-        status_msg.data = str(self.mode.value)
-        self.rover_mode_pub.publish(status_msg)
-    
-    def method_control_callback(self, msg):
-        self.method_control = MethodControl(int(msg.data))
-        instance.set("method_control", int(msg.data))
-        instance.save()
-        self.get_logger().info(f"method_control: {self.method_control}")
+    def rover_status(self):
+        self.rover_mode_signal.emit(self.mode.value)
+        self.is_rover_connected_signal.emit(True)
 
     def set_twist(self, linear_x, angular_z):
-        twist = Twist()
-        twist.linear.x = float(linear_x)
-        twist.angular.z = float(angular_z)
-        self.cmd_vel_pub.publish(twist)
+        if linear_x is None or angular_z is None:
+            print("Navigation [ERROR]: >> linear_x or angular_z is None")
+            return
+        self.navigation_controller.set_velocity(linear_velocity=linear_x, angular_velocity=angular_z)
     
-    def vel_callback(self, msg: Twist):
-        if self.method_control != MethodControl.WEB:
+    def set_rpm(self, left_rpm:int, right_rpm:int):
+        if self.control != Control.FREE:
             return
-        self.control_x = msg.linear.x
-        self.control_z = msg.angular.z
-
-    def control_x_callback(self, msg):
-        if self.method_control == MethodControl.WEB:
+        if self.mode != Mode.CAMERA:
             return
-
-        if self.control_mode == ControlMode.ROVER:
-            ch2_value = int(msg.data)
-            new_x = self.control_lib.rover_x(ch2_value)
-            self.control_x = new_x
-        elif self.control_mode == ControlMode.DELTA:
-            self.control_x = 0
-
-    def control_z_callback(self, msg):
-        if self.method_control == MethodControl.WEB:
+        self.navigation_controller.set_rpm(left_rpm=left_rpm, right_rpm=right_rpm)
+        print(f"Navigation: >> left_rpm: {left_rpm} right_rpm: {right_rpm}")
+    
+    def set_velocity(self, linear_x=None, angular_z=None):
+        if self.control != Control.FREE:
             return
-
-        if self.control_mode == ControlMode.ROVER:
-            ch3_value = int(msg.data)
-            new_z = self.control_lib.rover_z(ch3_value)
-            self.control_z = new_z
-        elif self.control_mode == ControlMode.DELTA:
-            self.control_z = 0
-
-    def control_mode_callback(self, msg):
-        if self.method_control == MethodControl.WEB:
+        if self.mode != Mode.VELOCITY:
             return
-
-        # self.get_logger().info(f"control_mode: {msg.data}")
-        if self.current_swa == int(msg.data):
+        if linear_x is None or angular_z is None:
+            print("Navigation [ERROR]: >> linear_x or angular_z is None")
             return
-        self.current_swa = int(msg.data)
-        if msg.data == 1000:
-            self.control_mode = ControlMode.ROVER
-            self.get_logger().info("control mode: rover")
-        # elif msg.data == 2000:
-        #     self.control_mode = ControlMode.DELTA
-        #     self.get_logger().info("control mode: delta")
+        self.control_x = linear_x
+        self.control_z = angular_z
+
+    def control_x_callback(self, value: int):
+        if self.control != Control.FS_I6:
+            return
+        new_x = self.control_lib.rover_x(value)
+        if new_x > 0.5:
+            print("Navigation [ERROR]: >> control_x is too large")
+            return
+        self.control_x = new_x
+        # print(f"Navigation: >> control_x: {self.control_x}")
+
+    def control_z_callback(self, value: int):
+        if self.control != Control.FS_I6:
+            return
+        new_z = self.control_lib.rover_z(value)
+        if new_z > 0.5:
+            print("Navigation [ERROR]: >> control_z is too large")
+            return
+        self.control_z = new_z
+        # print(f"Navigation: >> control_z: {self.control_z}")
+    # def control_mode_callback(self, msg):
+    #     if self.control == Control.FREE:
+    #         return
+    
+    def swa_callback(self, value: int):
+        if self.current_swa == value:
+            return
+        self.current_swa = value
+        if self.current_swa == 1000:
+            self.control = Control.FREE
+            print(f"Navigation: >> control: {self.control}")
+        elif self.current_swa == 2000:
+            self.control = Control.FS_I6
+            print(f"Navigation: >> control: {self.control}")
         else:
-            self.get_logger().info("invalid control mode")
-
-    def detect_obstacle(self):
-
-        return False  # Ví dụ: không có vật cản
-
-    def avoid_obstacle(self):
-        """Điều khiển robot tránh vật cản."""
-        self.set_twist(0, 0.5)
-
-    def rover_status_publish(self, status):
-        status_msg = String()
-        status_msg.data = status
-        self.rover_status_pub.publish(status_msg)
+            print("Navigation [ERROR]: >> invalid swa")
 
     def navigate(self):
+        if self.control == Control.FREE:
+            if self.mode == Mode.GPS:
+                if not self.is_running:
+                    print("Navigation: >> not running")
+                    return
+                if self.goal_lat is None or self.goal_lon is None:
+                    print("Navigation: >> waiting for goal")
+                    return
 
-        if self.mode == Mode.GPS:
-            if not self.is_running:
-                return
-            if self.goal_lat is None or self.goal_lon is None:
-                self.get_logger().info("waiting for goal")
-                return
+                if self.current_lat is None or self.current_lon is None:
+                    print("Navigation: >> waiting for gps fix")
+                    return
 
-            if self.current_lat is None or self.current_lon is None:
-                self.get_logger().info("waiting for gps fix")
-                return
+                if self.start_lat is None or self.start_lon is None:
+                    self.start_lat = self.current_lat
+                    self.start_lon = self.current_lon
 
-            if self.start_lat is None or self.start_lon is None:
-                self.start_lat = self.current_lat
-                self.start_lon = self.current_lon
-
-            linear_x, angular_z = self.navigation_controller.compute_twist_stanley(
-                start_lat=self.start_lat,
-                start_lon=self.start_lon,
-                current_lat=self.current_lat,
-                current_lon=self.current_lon,
-                target_lat=self.goal_lat,
-                target_lon=self.goal_lon,
-                current_heading=self.current_heading,
-                linear_vel_x=self.linear_vel_x
-            )
-            if linear_x == 0 and angular_z == 0:
-                self.is_segment_done = True
-                self.rover_status_publish("segment_done")
-            # self.set_twist(linear_x, angular_z)
-            self.get_logger().info(f"linear_x: {linear_x} angular_z: {angular_z}")
-        elif self.mode == Mode.CAMERA:
-            pass
-        elif self.mode == Mode.CONTROL:
-            self.get_logger().info(f"x: {self.control_x} z: {self.control_z}")
+                linear_x, angular_z = self.navigation_controller.compute_twist_stanley(
+                    start_lat=self.start_lat,
+                    start_lon=self.start_lon,
+                    current_lat=self.current_lat,
+                    current_lon=self.current_lon,
+                    target_lat=self.goal_lat,
+                    target_lon=self.goal_lon,
+                    current_heading=self.current_heading,
+                    linear_vel_x=self.linear_vel_x
+                )
+                if linear_x == 0 and angular_z == 0:
+                    self.is_segment_done = True
+                    self.start_lat = None
+                    self.start_lon = None
+                # self.set_twist(linear_x, angular_z)
+                print(f"Navigation: >> linear_x: {linear_x} angular_z: {angular_z}")
+            elif self.mode == Mode.CAMERA:
+                pass
+            elif self.mode == Mode.VELOCITY:
+                print(f"Navigation: >> x: {self.control_x} z: {self.control_z}")
+                self.set_twist(self.control_x, self.control_z)
+        elif self.control == Control.FS_I6:
+            print(f"Navigation: >> x: {self.control_x} z: {self.control_z}")
             self.set_twist(self.control_x, self.control_z)
 
-    def handle_destroy(self):
-        self.get_logger().info("navigation node has been stopped")
-        self.destroy_node()
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    navigation = Navigation()
-    try:
-        rclpy.spin(navigation)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        navigation.handle_destroy()
-        if rclpy.ok():
-            rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()
+    def clean_up(self):
+        self.timer.stop()
+        self.navigation_controller.clean_up()
+        print("Navigation: >> Navigation stopped")
+       

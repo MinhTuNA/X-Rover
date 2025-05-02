@@ -31,10 +31,10 @@ class RobotInterface(Device, QObject):
         )
         self.old_X, self.old_Y, self.old_Z = self.X, self.Y, self.Z
         self.input_value = [0, 0, 0, 0, 0, 0]
-        self.x_max = 200
-        self.y_max = 200
-        self.x_min = -200
-        self.y_min = -200
+        self.x_max = 190
+        self.y_max = 190
+        self.x_min = -190
+        self.y_min = -190
         self.scurve_tool = Scurve_Interpolator()
         self.new_response = ""
 

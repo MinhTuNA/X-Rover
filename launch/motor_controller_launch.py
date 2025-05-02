@@ -31,10 +31,17 @@ def generate_launch_description():
             ),
             # Node(
             #     package="xrover",
-            #     executable="signal_light_node",
-            #     name="signal_light",
-            #     output="screen",
+            #     executable="connect_server_node",
+            #     name="connect_server", 
+            #     output="screen", 
             #     parameters=[],
             # ),
+            Node(
+                package="xrover",
+                executable="signal_light_node",
+                name="signal_light",
+                output="screen",
+                parameters=[],
+            ),
         ]
     )
